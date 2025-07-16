@@ -12,6 +12,8 @@ export default function MakeATale() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
 
+  const apiUrl = import.meta.env.VITE_API_URL;
+
   async function handleGenerate() {
     setLoading(true);
     setError('');
@@ -19,7 +21,7 @@ export default function MakeATale() {
     setCurrent(0);
 
     try {
-      const res = await fetch('http://localhost:8000/generate-story-ai', {
+      const res = await fetch(`${apiUrl}/generate-story-ai`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ prompt }),
