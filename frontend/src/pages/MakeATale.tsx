@@ -1,24 +1,28 @@
 import { useState } from 'react';
-import { useSession, useSupabaseClient } from '../context/AuthContext';
 
 export default function MakeATale() {
   const [description, setDescription] = useState('');
   const [tale, setTale] = useState('');
   const [loading, setLoading] = useState(false);
-  const supabase = useSupabaseClient();
-  const session = useSession();
 
   async function handleGenerate() {
     setLoading(true);
-    const { data, error } = await supabase.functions.invoke('generate_tale', {
-      body: { description }
-    });
-    if (data) setTale(data.tale);
-    if (error) alert(error.message);
-    setLoading(false);
+    try {
+      const res = await fetch('http://localhost:8000/generate-story', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ description })
+      });
+      const data = await res.json();
+      if (data.tale) setTale(data.tale);
+    } catch {
+      alert('Failed to generate tale');
+    } finally {
+      setLoading(false);
+    }
   }
 
-  const disabled = !session || loading;
+  const disabled = loading || description.trim() === '';
 
   return (
     <div className="max-w-xl mx-auto space-y-4">
