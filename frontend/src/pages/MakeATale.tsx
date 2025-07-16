@@ -25,22 +25,35 @@ export default function MakeATale() {
   const disabled = loading || description.trim() === '';
 
   return (
-    <div className="max-w-xl mx-auto space-y-4">
-      <textarea
-        className="w-full border rounded p-2"
-        rows={3}
-        placeholder="Describe your tale..."
-        value={description}
-        onChange={(e) => setDescription(e.target.value)}
-      />
-      <button
-        onClick={handleGenerate}
-        disabled={disabled}
-        className="px-4 py-2 bg-blue-600 text-white rounded disabled:opacity-50"
-      >
-        {loading ? 'Generating...' : 'Generate'}
-      </button>
-      {tale && <pre className="whitespace-pre-wrap border p-2">{tale}</pre>}
+    <div className="max-w-2xl mx-auto space-y-4">
+      <h1 className="text-3xl font-bold text-center mb-2">Crea tu Cuento</h1>
+      <p className="text-center text-gray-600">
+        Describe la historia que te gustaría contar y deja que la magia comience.
+      </p>
+      <div className="bg-white p-4 sm:p-6 rounded shadow space-y-4">
+        <textarea
+          className="w-full border rounded p-2 focus:outline-none focus:ring"
+          rows={3}
+          placeholder="Un dragón aventurero en el espacio..."
+          value={description}
+          onChange={(e) => setDescription(e.target.value)}
+        />
+        <button
+          onClick={handleGenerate}
+          disabled={disabled}
+          className="w-full py-2 bg-blue-600 text-white rounded disabled:opacity-50"
+        >
+          {loading ? 'Generando...' : 'Generar cuento'}
+        </button>
+        {tale && (
+          <pre className="whitespace-pre-wrap border p-2 bg-gray-50 rounded max-h-96 overflow-y-auto">
+            {tale}
+          </pre>
+        )}
+      </div>
+      <p className="text-xs text-gray-500 text-center">
+        El servicio puede tardar unos segundos en responder.
+      </p>
     </div>
   );
 }
