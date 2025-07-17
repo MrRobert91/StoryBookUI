@@ -33,7 +33,7 @@ export default function MakeATale() {
         setError(data.error || 'No chapters found');
       }
     } catch (err) {
-      setError('Error generating story');
+      setError('Error generating story: ' + (err instanceof Error ? err.message : String(err)));
     } finally {
       setLoading(false);
     }
