@@ -1,9 +1,10 @@
-from fastapi import FastAPI
+from fastapi import FastAPI, Depends, HTTPException, status, Header
 from pydantic import BaseModel
 from fastapi.middleware.cors import CORSMiddleware
 from langchain_groq import ChatGroq
 from langchain.schema import SystemMessage, HumanMessage
 import os
+from jose import jwt
 import re
 import json
 
@@ -15,18 +16,35 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+
+def verify_token(authorization: str = Header(None)):
+    if not authorization or not authorization.startswith("Bearer "):
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED,
+                            detail="Not authenticated")
+    token = authorization.split(" ", 1)[1]
+    secret = os.getenv("SUPABASE_JWT_SECRET")
+    if not secret:
+        raise HTTPException(status_code=500,
+                            detail="SUPABASE_JWT_SECRET not configured")
+    try:
+        payload = jwt.decode(token, secret, algorithms=["HS256"])
+    except Exception:
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED,
+                            detail="Invalid token")
+    return payload
+
 class TaleRequest(BaseModel):
     description: str
 
 @app.post("/generate-story")
-async def generate_story(req: TaleRequest):
+async def generate_story(req: TaleRequest, payload=Depends(verify_token)):
     return {"tale": f"Once upon a time about {req.description}"}
 
 class TaleAIRequest(BaseModel):
     prompt: str
 
 @app.post("/generate-story-ai")
-async def generate_story_ai(req: TaleAIRequest):
+async def generate_story_ai(req: TaleAIRequest, payload=Depends(verify_token)):
     groq_api_key = os.getenv("GROQ_API_KEY")
     if not groq_api_key:
         return {"error": "GROQ_API_KEY not set"}

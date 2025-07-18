@@ -1,6 +1,9 @@
 import { Link } from 'react-router-dom';
+import { useContext } from 'react';
+import { AuthContext } from '../contexts/AuthContext';
 
 export default function Navbar() {
+  const { token } = useContext(AuthContext);
 
   return (
     <nav className="bg-white border-b p-4 flex justify-between items-center">
@@ -11,7 +14,16 @@ export default function Navbar() {
         <Link to="/pricing">Pricing</Link>
         <Link to="/faq">FAQ</Link>
       </div>
-      <div className="space-x-4 text-sm"></div>
+      <div className="space-x-4 text-sm">
+        {token ? (
+          <Link to="/logout">Logout</Link>
+        ) : (
+          <>
+            <Link to="/login">Login</Link>
+            <Link to="/register">Register</Link>
+          </>
+        )}
+      </div>
     </nav>
   );
 }

@@ -1,4 +1,5 @@
-import React, { useState } from 'react';
+import React, { useState, useContext } from 'react';
+import { AuthContext } from '../contexts/AuthContext';
 
 interface Chapter {
   title: string;
@@ -12,9 +13,8 @@ export default function MakeATale() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
 
-  //const apiUrl = import.meta.env.VITE_API_URL;
-  //const apiUrl ='makeataleapi-tvda3i.internal:8000';
-  const apiUrl ='http://makeataleapi-tvda3i.internal:8000';
+  const { token } = useContext(AuthContext);
+  const apiUrl = import.meta.env.VITE_API_URL || 'http://makeataleapi-tvda3i.internal:8000';
 
   
 
@@ -27,7 +27,10 @@ export default function MakeATale() {
     try {
       const res = await fetch(`${apiUrl}/generate-story-ai`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Content-Type': 'application/json',
+          ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        },
         body: JSON.stringify({ prompt }),
       });
       const data = await res.json();
