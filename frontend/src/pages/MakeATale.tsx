@@ -12,7 +12,11 @@ export default function MakeATale() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
 
-  const apiUrl = import.meta.env.VITE_API_URL;
+  //const apiUrl = import.meta.env.VITE_API_URL;
+  const apiUrl ='makeataleapi-tvda3i.internal:8000';
+  //const apiUrl ='http://makeataleapi-tvda3i.internal:8000';
+
+  
 
   async function handleGenerate() {
     setLoading(true);
