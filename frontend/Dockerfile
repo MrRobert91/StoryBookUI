@@ -1,7 +1,6 @@
 FROM node:18-alpine AS build
 WORKDIR /app
 COPY package.json package-lock.json* yarn.lock* ./
-COPY .env .env
 RUN npm install
 
 # Añade este comando para ver el valor en los logs de build:
