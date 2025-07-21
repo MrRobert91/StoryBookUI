@@ -13,7 +13,7 @@ export default function MakeATale() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
 
-  const apiUrl = 'http://makeataleapi-tvda3i.internal:8000';
+  const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
 
   async function handleGenerate() {
     setLoading(true);

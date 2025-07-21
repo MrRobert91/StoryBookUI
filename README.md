@@ -30,6 +30,7 @@ OPENAI_API_KEY=<your-openai-key>
 GROQ_API_KEY=<your-groq-key>
 NEXT_PUBLIC_SUPABASE_URL=<your-supabase-url>
 NEXT_PUBLIC_SUPABASE_ANON_KEY=<your-supabase-anon-key>
+NEXT_PUBLIC_API_URL=http://localhost:8000
 ```
 
 ## Project Structure
