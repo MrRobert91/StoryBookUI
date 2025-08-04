@@ -4,7 +4,6 @@ from fastapi.middleware.cors import CORSMiddleware
 from langchain_groq import ChatGroq
 from langchain.schema import SystemMessage, HumanMessage
 from supabase import create_client, Client
-import jwt
 import os
 import re
 import json
@@ -19,11 +18,10 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# Configuración de Supabase y JWT
+# Configuración de Supabase
 SUPABASE_URL = os.getenv("SUPABASE_URL")
 SUPABASE_ANON_KEY = os.getenv("SUPABASE_ANON_KEY")
 SUPABASE_SERVICE_ROLE_KEY = os.getenv("SUPABASE_SERVICE_ROLE_KEY")
-SUPABASE_JWT_SECRET = os.getenv("SUPABASE_JWT_SECRET")
 
 # Cliente privilegiado para tareas en segundo plano
 service_supabase: Client | None = None
@@ -90,15 +88,17 @@ async def generate_story_ai(req: TaleAIRequest):
 
 
 def verify_jwt(token: str) -> str:
-    if not SUPABASE_JWT_SECRET:
-        raise HTTPException(status_code=500, detail="SUPABASE_JWT_SECRET not set")
+    """Valida el JWT con Supabase y devuelve el ID de usuario."""
+    if not SUPABASE_URL or not SUPABASE_ANON_KEY:
+        raise HTTPException(status_code=500, detail="Supabase no configurado")
+    client = create_client(SUPABASE_URL, SUPABASE_ANON_KEY)
     try:
-        payload = jwt.decode(token, SUPABASE_JWT_SECRET, algorithms=["HS256"])
-        return payload.get("sub")
-    except jwt.ExpiredSignatureError:
-        raise HTTPException(status_code=401, detail="Token expirado")
-    except jwt.InvalidTokenError:
+        user_resp = client.auth.get_user(token)
+    except Exception as exc:  # pragma: no cover - network errors
+        raise HTTPException(status_code=401, detail="Token inválido") from exc
+    if not user_resp or user_resp.user is None:
         raise HTTPException(status_code=401, detail="Token inválido")
+    return user_resp.user.id
 
 
 @app.post("/generate-story-ai-jwt")
