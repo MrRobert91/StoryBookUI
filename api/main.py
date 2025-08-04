@@ -39,6 +39,7 @@ def get_supabase_client(token: str) -> Client:
     client.postgrest.auth(token)
     return client
 
+
 class TaleRequest(BaseModel):
     description: str
 
@@ -110,6 +111,7 @@ async def generate_story_ai_jwt(
     user_id = verify_jwt(token)
 
     supabase = get_supabase_client(token)
+
     user_resp = (
         supabase.table("profiles")
         .select("credits, plan")
@@ -118,6 +120,7 @@ async def generate_story_ai_jwt(
         .execute()
     )
     data = user_resp.data or {}
+
     credits = data.get("credits", 0)
     if credits <= 0:
         raise HTTPException(
@@ -185,6 +188,7 @@ async def refill_plus_credits():
             now = datetime.now(timezone.utc)
             resp = (
                 service_supabase.table("profiles")
+
                 .select("id, credits, plan, plus_since, last_credited_at")
                 .eq("plan", "plus")
                 .execute()
@@ -198,6 +202,7 @@ async def refill_plus_credits():
                 if now - last_dt >= timedelta(days=30):
                     new_credits = (user.get("credits") or 0) + 10
                     service_supabase.table("profiles").update(
+
                         {"credits": new_credits, "last_credited_at": now.isoformat()}
                     ).eq("id", user["id"]).execute()
         await asyncio.sleep(60 * 60 * 24)
