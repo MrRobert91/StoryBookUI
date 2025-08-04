@@ -21,11 +21,24 @@ app.add_middleware(
 
 # Configuración de Supabase y JWT
 SUPABASE_URL = os.getenv("SUPABASE_URL")
+SUPABASE_ANON_KEY = os.getenv("SUPABASE_ANON_KEY")
 SUPABASE_SERVICE_ROLE_KEY = os.getenv("SUPABASE_SERVICE_ROLE_KEY")
 SUPABASE_JWT_SECRET = os.getenv("SUPABASE_JWT_SECRET")
-supabase: Client | None = None
+
+# Cliente privilegiado para tareas en segundo plano
+service_supabase: Client | None = None
 if SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY:
-    supabase = create_client(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY)
+    service_supabase = create_client(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY)
+
+
+def get_supabase_client(token: str) -> Client:
+    """Devuelve un cliente de Supabase autenticado con el JWT del usuario."""
+    if not SUPABASE_URL or not SUPABASE_ANON_KEY:
+        raise HTTPException(status_code=500, detail="Supabase no configurado")
+    client = create_client(SUPABASE_URL, SUPABASE_ANON_KEY)
+    client.postgrest.auth(token)
+    return client
+
 
 class TaleRequest(BaseModel):
     description: str
@@ -97,16 +110,17 @@ async def generate_story_ai_jwt(
     token = authorization.split(" ", 1)[1]
     user_id = verify_jwt(token)
 
-    if supabase is None:
-        raise HTTPException(status_code=500, detail="Supabase no configurado")
+    supabase = get_supabase_client(token)
 
     user_resp = (
         supabase.table("profiles")
         .select("credits, plan")
         .eq("id", user_id)
+        .single()
         .execute()
     )
-    data = user_resp.data[0] if user_resp.data else {}
+    data = user_resp.data or {}
+
     credits = data.get("credits", 0)
     if credits <= 0:
         raise HTTPException(
@@ -170,10 +184,11 @@ async def generate_story_ai_jwt(
 
 async def refill_plus_credits():
     while True:
-        if supabase is not None:
+        if service_supabase is not None:
             now = datetime.now(timezone.utc)
             resp = (
-                supabase.table("profiles")
+                service_supabase.table("profiles")
+
                 .select("id, credits, plan, plus_since, last_credited_at")
                 .eq("plan", "plus")
                 .execute()
@@ -186,7 +201,8 @@ async def refill_plus_credits():
                     last_dt = now
                 if now - last_dt >= timedelta(days=30):
                     new_credits = (user.get("credits") or 0) + 10
-                    supabase.table("profiles").update(
+                    service_supabase.table("profiles").update(
+
                         {"credits": new_credits, "last_credited_at": now.isoformat()}
                     ).eq("id", user["id"]).execute()
         await asyncio.sleep(60 * 60 * 24)
