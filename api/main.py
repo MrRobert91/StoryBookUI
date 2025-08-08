@@ -195,14 +195,14 @@ async def generate_story_ai_jwt(
         if story_json.get("chapters")
         else "Story"
     )
-    supabase.table("stories").insert(
-        {
-            "user_id": user_id,
-            "title": title,
-            "content": json.dumps(story_json),
-            "prompt": req.prompt,
-        }
-    ).execute()
+    # supabase.table("stories").insert(
+    #     {
+    #         "user_id": user_id,
+    #         "title": title,
+    #         "content": json.dumps(story_json),
+    #         "prompt": req.prompt,
+    #     }
+    # ).execute()
     return story_json
 
 
