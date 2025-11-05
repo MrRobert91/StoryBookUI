@@ -82,7 +82,7 @@ async def generate_story_ai(req: TaleAIRequest):
 
     messages = [SystemMessage(content=system_prompt), HumanMessage(content=req.prompt)]
 
-    response = chat(messages)
+    response = await chat.ainvoke(messages)
 
     def extract_json(text):
         match = re.search(r"\{.*\}", text, re.DOTALL)
@@ -172,7 +172,7 @@ async def generate_story_ai_jwt(
         SystemMessage(content=system_prompt),
         HumanMessage(content=req.prompt),
     ]
-    response = chat(messages)
+    response = await chat.ainvoke(messages)
 
     def extract_json(text):
         match = re.search(r"\{.*\}", text, re.DOTALL)
