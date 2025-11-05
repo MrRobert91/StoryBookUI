@@ -74,10 +74,10 @@ async def generate_story_ai(req: TaleAIRequest):
 
     system_prompt = (
         "Eres un experto escritor de cuentos infantiles. "
-        "Escribe un cuento original dividido en capítulos, "
+        "Escribe un cuento original con un título y dividido en capítulos, "
         "cada capítulo debe tener un título y un texto breve. "
         "Devuelve SOLO la respuesta en formato JSON con la estructura: "
-        '{"chapters": [{"title": "...", "text": "..."}, ...]}'
+        '{"title": "...", "chapters": [{"title": "...", "text": "..."}, ...]}'
     )
 
     messages = [SystemMessage(content=system_prompt), HumanMessage(content=req.prompt)]
@@ -162,10 +162,10 @@ async def generate_story_ai_jwt(
 
     system_prompt = (
         "Eres un experto escritor de cuentos infantiles. "
-        "Escribe un cuento original dividido en capítulos, "
+        "Escribe un cuento original con un título y dividido en capítulos, "
         "cada capítulo debe tener un título y un texto breve. "
         "Devuelve SOLO la respuesta en formato JSON con la estructura: "
-        '{"chapters": [{"title": "...", "text": "..."}, ...]}'
+        '{"title": "...", "chapters": [{"title": "...", "text": "..."}, ...]}'
     )
 
     messages = [
@@ -190,11 +190,6 @@ async def generate_story_ai_jwt(
     supabase.table("profiles").update({"credits": credits - 1}).eq(
         "id", user_id
     ).execute()
-    title = (
-        story_json.get("chapters", [{}])[0].get("title")
-        if story_json.get("chapters")
-        else "Story"
-    )
     # supabase.table("stories").insert(
     #     {
     #         "user_id": user_id,
