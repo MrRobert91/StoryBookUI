@@ -1,6 +1,7 @@
 fastapi
 uvicorn
 langchain
+langchain-core
 openai
 langchain_community
 langchain-groq
