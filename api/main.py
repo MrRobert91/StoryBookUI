@@ -10,6 +10,7 @@ import json
 import asyncio
 from datetime import datetime, timezone, timedelta
 import logging
+from agents_test import graph, StoryState
 
 app = FastAPI()
 app.add_middleware(
@@ -199,6 +200,93 @@ async def generate_story_ai_jwt(
     #     }
     # ).execute()
     return story_json
+
+
+@app.post("/generate-story-ai-images-jwt")
+async def generate_story_ai_images_jwt(
+    req: TaleAIRequest, authorization: str | None = Header(default=None)
+):
+    """
+    Endpoint protegido por JWT que genera un cuento con imágenes usando el workflow de agents_test.py
+    """
+    logger.info("Solicitud a /generate-story-ai-images-jwt")
+    
+    # Validar JWT
+    if not authorization or not authorization.startswith("Bearer "):
+        logger.warning("Cabecera Authorization ausente o inválida: %s", authorization)
+        raise HTTPException(status_code=401, detail="Falta token de autenticación")
+    
+    token = authorization.split(" ", 1)[1]
+    user_id = verify_jwt(token)
+    logger.info("Usuario autenticado: %s", user_id)
+
+    # Verificar créditos
+    supabase = get_supabase_client(token)
+    user_resp = (
+        supabase.table("profiles")
+        .select("credits, plan")
+        .eq("id", user_id)
+        .single()
+        .execute()
+    )
+    data = user_resp.data or {}
+    logger.info("Perfil de usuario: %s", data)
+
+    credits = data.get("credits", 0)
+    if credits <= 0:
+        logger.warning("Usuario %s sin créditos", user_id)
+        raise HTTPException(
+            status_code=402,
+            detail="No tienes créditos disponibles. Suscríbete para continuar.",
+        )
+
+    # Generar cuento con imágenes usando el workflow
+    try:
+        logger.info("Invocando workflow con prompt: %s", req.prompt[:100])
+        
+        result = graph.invoke({
+            "messages": [{"role": "user", "content": req.prompt}]
+        })
+        
+        final_output = result.get("final_output")
+        
+        if not final_output:
+            logger.error("El workflow no devolvió final_output")
+            raise HTTPException(
+                status_code=500, 
+                detail="Error generando el cuento con imágenes"
+            )
+        
+        logger.info("Cuento generado exitosamente: %s", final_output.get("title"))
+        
+        # Descontar crédito
+        supabase.table("profiles").update({"credits": credits - 1}).eq(
+            "id", user_id
+        ).execute()
+        logger.info("Crédito descontado. Créditos restantes: %d", credits - 1)
+        
+        # Opcional: Guardar el cuento en la base de datos
+        try:
+            supabase.table("stories").insert(
+                {
+                    "user_id": user_id,
+                    "title": final_output.get("title", "Sin título"),
+                    "content": json.dumps(final_output),
+                    "prompt": req.prompt,
+                }
+            ).execute()
+            logger.info("Cuento guardado en la base de datos")
+        except Exception as e:
+            logger.warning("No se pudo guardar el cuento en la BD: %s", e)
+        
+        return final_output
+        
+    except Exception as e:
+        logger.exception("Error ejecutando el workflow")
+        raise HTTPException(
+            status_code=500,
+            detail=f"Error generando el cuento: {str(e)}"
+        )
 
 
 async def refill_plus_credits():

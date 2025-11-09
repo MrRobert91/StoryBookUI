@@ -176,20 +176,16 @@ logger.info("Image generation model selected: %s (from IMAGE_MODEL=%s)", _select
 # ---- Cache + guards para evitar llamadas repetidas ----
 _IMAGE_TOOL_CACHE: dict[str, str] = {}
 _IMAGE_TOOL_COUNTER = defaultdict(int)
-_MAX_IMAGE_TOOL_CALLS_PER_RUN = 50
+_MAX_IMAGE_TOOL_CALLS_PER_RUN = 10
 
 def _reset_image_tool_state():
     _IMAGE_TOOL_CACHE.clear()
     _IMAGE_TOOL_COUNTER.clear()
     logger.debug("Image tool cache and counters reset")
 
-# ---- Replace the decorated tool function with an internal impl + a tool wrapper ----
+# ---- Implementación directa de generación de imagen (sin StructuredTool) ----
 def _generate_image_impl(prompt: str, **kwargs) -> str:
-    """
-    Internal implementation that actually calls OpenAI image API.
-    Call this function directly from your workflow to generate a single image.
-    """
-    # Guard: avoid too many calls
+    # Guard: evitar llamadas excesivas
     _IMAGE_TOOL_COUNTER["total"] += 1
     if _IMAGE_TOOL_COUNTER["total"] > _MAX_IMAGE_TOOL_CALLS_PER_RUN:
         logger.error("Límite de llamadas a generate_image alcanzado (%d). Abortando llamadas adicionales.",
@@ -198,14 +194,7 @@ def _generate_image_impl(prompt: str, **kwargs) -> str:
 
     model_name = kwargs.get("model_name") or kwargs.get("model") or _selected_image_model
     requested = str(model_name).strip().lower()
-    model_to_use = _IMAGE_MODEL_ALIASES.get(requested, None)
-    if not model_to_use:
-        logger.warning(
-            "Requested image model '%s' not recognized. Falling back to default '%s'.",
-            requested,
-            _selected_image_model,
-        )
-        model_to_use = _selected_image_model
+    model_to_use = _IMAGE_MODEL_ALIASES.get(requested, _selected_image_model)
 
     cache_key = f"{model_to_use}::" + re.sub(r"\s+", " ", prompt.strip())[:2000]
     if cache_key in _IMAGE_TOOL_CACHE:
@@ -224,18 +213,14 @@ def _generate_image_impl(prompt: str, **kwargs) -> str:
         logger.debug("generate_image response repr: %s", repr(response)[:1000])
 
         url = None
-        if hasattr(response, "data") and isinstance(response.data, list) and len(response.data) > 0:
+        if hasattr(response, "data") and isinstance(response.data, list) and response.data:
             first = response.data[0]
             if isinstance(first, dict):
-                if "url" in first and isinstance(first["url"], str):
-                    url = first["url"]
-                elif "b64_json" in first and isinstance(first["b64_json"], str):
-                    url = "data:image/png;base64," + first["b64_json"]
+                url = first.get("url") or ("data:image/png;base64," + first["b64_json"] if "b64_json" in first else None)
             else:
-                if hasattr(first, "url"):
-                    url = getattr(first, "url")
-                elif hasattr(first, "b64_json"):
-                    url = "data:image/png;base64," + getattr(first, "b64_json")
+                url = getattr(first, "url", None) or (
+                    "data:image/png;base64," + getattr(first, "b64_json") if hasattr(first, "b64_json") else None
+                )
         if not url and hasattr(response, "url"):
             url = getattr(response, "url")
         if not url:
@@ -252,39 +237,19 @@ def _generate_image_impl(prompt: str, **kwargs) -> str:
         _IMAGE_TOOL_CACHE[cache_key] = ""
         return ""
 
-# create the StructuredTool wrapper for agents
-generate_image_tool = tool(_generate_image_impl)
-
-# keep a direct callable reference for backend code
+# Referencia directa para usar en el workflow
 generate_image = _generate_image_impl
 
 logger.info("Construyendo image_agent (imágenes: prompts con Groq, generación de imágenes con OpenAI)...")
 
+# Eliminar por completo la creación de image_agent y su system prompt
+logger.info("Inicializando image_llm (Groq) para redactar prompts de imagen; la generación se hace con generate_image() directa.")
 image_llm = ChatGroq(
     groq_api_key=groq_key,
     model="llama-3.3-70b-versatile",
     temperature=0.2,
 )
-
-image_system_prompt = (
-    """You are an image prompt engineer. Given a story or chapter text, produce a short,
-    vivid, detailed prompt suitable for an image-generation API and then call the generate_image
-    tool with it.
-
-    IMPORTANT: When calling the generate_image tool, pass a single object with the key 'prompt'
-    only, for example: {"prompt": "A detailed prompt..."}.
-    Do NOT pass custom model identifiers like fantasy_art or dragon_battle_model.
-    Allowed model names (if provided) are: gpt-image-1, gpt-image-1-mini, dall-e-2, dall-e-3.
-    If unsure, call the tool with only the prompt and let the backend choose the model."""
-)
-
-image_agent = create_agent(
-    model=image_llm,
-    tools=[generate_image_tool],
-    system_prompt=image_system_prompt,
-)
-logger.info("image_agent construido (Groq -> image tool)")
-
+# Nota: no se usa create_agent ni herramientas para imágenes.
 
 class StoryState(TypedDict):
     """State for the multi-agent workflow"""
@@ -376,24 +341,23 @@ def _make_image_prompt_from_llm(text_for_prompt: str) -> str:
 # Replace image_agent.invoke usage inside image_generation_node with prompt-generation + single generate_image call:
 
 def image_generation_node(state: StoryState):
-    """Generate images for cover and chapters"""
     logger.info("Entrando en node: image_generation_node")
     story = state.get("story_data")
     if not story:
         logger.error("No hay story_data en el estado")
         return {"final_output": None}
     try:
+        # Portada: generar prompt (con LLM) y llamar una sola vez a generate_image()
         logger.info("Generando imagen de portada...")
         cover_input = f"Book cover for: {story.title}\n\nStory summary: " + " ".join([c.title + ". " for c in story.chapters])
         logger.debug("Cover input for prompt generation: %s", cover_input[:500])
-
-        # Generate single cover prompt via LLM, then call generate_image exactly once
         cover_prompt_text = _make_image_prompt_from_llm(cover_input)
         logger.info("Cover prompt generated (len=%d): %s", len(cover_prompt_text), cover_prompt_text[:200])
         cover_url = generate_image(cover_prompt_text)
         story.cover_image_url = cover_url
         logger.info("Cover image URL: %s", cover_url)
 
+        # Capítulos: 1 llamada por capítulo
         logger.info("Generando imágenes para capítulos (%d)...", len(story.chapters))
         for idx, chapter in enumerate(story.chapters):
             try:
@@ -401,7 +365,6 @@ def image_generation_node(state: StoryState):
                 chapter_input = f"{chapter.title}: {chapter.content[:2000]}"
                 chap_prompt_text = _make_image_prompt_from_llm(chapter_input)
                 logger.info("Chapter %d prompt (len=%d): %s", idx+1, len(chap_prompt_text), chap_prompt_text[:200])
-                # single call to generate_image per chapter
                 ch_url = generate_image(chap_prompt_text)
                 chapter.image_url = ch_url
                 logger.info("Capítulo %d image_url: %s", idx+1, ch_url)
