@@ -115,8 +115,20 @@ def make_image_prompt(text: str) -> str:
         return text[:500]
 
 # ============================================================================
+# CONFIGURATION
+# ============================================================================
+DEFAULT_NUM_CHAPTERS = int(os.getenv("NUM_CHAPTERS", "3"))
+WORDS_PER_CHAPTER = 200
+
+# ============================================================================
 # AGENTS
 # ============================================================================
+'''
+groq_key = os.getenv("GROQ_API_KEY")
+if not groq_key:
+    raise EnvironmentError("GROQ_API_KEY not found. Set it in your .env file.")
+
+'''
 logger.info("Building story_agent (Groq)...")
 story_llm = ChatGroq(
     groq_api_key=groq_key,
@@ -124,13 +136,32 @@ story_llm = ChatGroq(
     temperature=0.7,
 )
 
+story_system_prompt = f"""Generate creative fantasy stories for children with exactly {DEFAULT_NUM_CHAPTERS} chapters.
+
+IMPORTANT GUIDELINES:
+- Each chapter must have approximately {WORDS_PER_CHAPTER} words
+- Content must be family-friendly and appropriate for children
+- Use colorful, imaginative descriptions
+- Include positive messages and friendly characters
+- Return structured JSON with 'title' and 'chapters' array
+- Each chapter must have 'title' and 'content' fields
+
+Example structure:
+{{
+  "title": "The Dragon's Adventure",
+  "chapters": [
+    {{"title": "Chapter 1: The Discovery", "content": "Once upon a time..."}},
+    {{"title": "Chapter 2: The Journey", "content": "The young dragon..."}}
+  ]
+}}"""
+
 story_agent = create_agent(
     model=story_llm,
     tools=[],
     response_format=Story,
-    system_prompt="Generate creative fantasy stories with multiple chapters. Return structured JSON with title and chapters array."
+    system_prompt=story_system_prompt
 )
-logger.info("story_agent ready")
+logger.info(f"story_agent ready (configured for {DEFAULT_NUM_CHAPTERS} chapters, ~{WORDS_PER_CHAPTER} words each)")
 
 logger.info("Building image_llm (Groq)...")
 image_llm = ChatGroq(
@@ -147,6 +178,13 @@ def story_generation_node(state: StoryState):
     """Generate story text using Groq LLM"""
     logger.info("Node: story_generation")
     messages = state.get("messages", [])
+    '''
+     # Añadir instrucción explícita sobre número de capítulos si no está en el mensaje
+    user_message = messages[0]["content"] if messages else ""
+    if "chapter" not in user_message.lower():
+        enhanced_message = f"{user_message}. Generate exactly {DEFAULT_NUM_CHAPTERS} chapters, each with approximately {WORDS_PER_CHAPTER} words."
+        messages = [{"role": "user", "content": enhanced_message}]
+    '''
     logger.info(f"Invoking story_agent with messages: {messages}")
     
     result = story_agent.invoke({"messages": messages})
@@ -215,7 +253,7 @@ if __name__ == "__main__":
     
     try:
         result = graph.invoke({
-            "messages": [{"role": "user", "content": "Write a 3-chapter sci-fi story about dragons in space."}]
+            "messages": [{"role": "user", "content": "Write a sci-fi story about dragons in space."}]
         })
         logger.info("Workflow completed")
         
