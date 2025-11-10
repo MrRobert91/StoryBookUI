@@ -99,9 +99,10 @@ def make_image_prompt(text: str) -> str:
             {
                 "role": "system", 
                 "content": (
-                    "Create a concise, vivid image prompt for DALL-E suitable for children's books. "
-                    "The prompt must be family-friendly, colorful, whimsical, and appropriate for all ages. "
-                    "Avoid any scary, violent, or dark imagery. Focus on bright colors, friendly characters, "
+                    "Create a concise image prompt suitable for children's books. "
+                    "The result MUST describe an illustration in a whimsical storybook/cartoon style, and appropriate for all ages. "
+                    "Use bright, pastel colors, soft lines, and magical elements. "
+                    "AVOID any scary, violent, dark, or realistic/photorealistic imagery. Focus on bright colors, friendly characters, "
                     "and magical elements. Return only the prompt text."
                 )
             },
@@ -118,7 +119,7 @@ def make_image_prompt(text: str) -> str:
 # CONFIGURATION
 # ============================================================================
 DEFAULT_NUM_CHAPTERS = int(os.getenv("NUM_CHAPTERS", "3"))
-WORDS_PER_CHAPTER = 200
+WORDS_PER_CHAPTER = 250
 
 # ============================================================================
 # AGENTS
