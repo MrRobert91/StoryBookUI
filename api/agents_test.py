@@ -96,11 +96,19 @@ def make_image_prompt(text: str) -> str:
     """Use LLM to create optimized DALL-E prompt from story text"""
     try:
         response = image_llm.invoke([
-            {"role": "system", "content": "Create a concise, vivid image prompt for DALL-E. Return only the prompt text."},
+            {
+                "role": "system", 
+                "content": (
+                    "Create a concise, vivid image prompt for DALL-E suitable for children's books. "
+                    "The prompt must be family-friendly, colorful, whimsical, and appropriate for all ages. "
+                    "Avoid any scary, violent, or dark imagery. Focus on bright colors, friendly characters, "
+                    "and magical elements. Return only the prompt text."
+                )
+            },
             {"role": "user", "content": f"Story text:\n\n{text[:2000]}"}
         ])
         prompt = response.content.strip() if hasattr(response, 'content') else text[:500]
-        logger.debug(f"Generated prompt: {prompt[:200]}")
+        logger.debug(f"Generated child-friendly prompt: {prompt[:200]}")
         return prompt
     except Exception as e:
         logger.error(f"Error creating image prompt: {e}")
