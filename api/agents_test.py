@@ -48,8 +48,8 @@ IMAGE_MODELS = {
     "gpt-image-1": "gpt-image-1",
     "gpt-image-1-mini": "gpt-image-1-mini",
 }
-DEFAULT_IMAGE_MODEL = os.getenv("IMAGE_MODEL", "gpt-image-1-mini").strip().lower()
-SELECTED_IMAGE_MODEL = IMAGE_MODELS.get(DEFAULT_IMAGE_MODEL, "gpt-image-1-mini")
+DEFAULT_IMAGE_MODEL = os.getenv("IMAGE_MODEL", "dall-e-2").strip().lower()
+SELECTED_IMAGE_MODEL = IMAGE_MODELS.get(DEFAULT_IMAGE_MODEL, "dall-e-2")
 logger.info(f"Image model: {SELECTED_IMAGE_MODEL}")
 
 # ============================================================================
@@ -61,12 +61,21 @@ def generate_image(prompt: str, model: str = None) -> str:
     logger.info(f"Generating image with {model_name}, prompt length: {len(prompt)}")
     
     try:
-        response = client.images.generate(
-            model=model_name,
-            prompt=prompt,
-            size="1024x1024",
-            n=1
-        )
+        # Preparar parámetros base
+        params = {
+            "model": model_name,
+            "prompt": prompt,
+            "size": "1024x1024",
+            "n": 1
+        }
+        
+        # Añadir 'quality' solo para gpt-image-1 y gpt-image-1-mini
+        if model_name in ["gpt-image-1", "gpt-image-1-mini"]:
+            params["quality"] = "low"
+            logger.debug(f"Added quality='low' for {model_name}")
+        
+        response = client.images.generate(**params)
+        logger.info(f"Image generation response: {response}") # Eliminar en producción
         url = response.data[0].url
         logger.info(f"Generated image: {url}")
         return url
@@ -152,6 +161,7 @@ def image_generation_node(state: StoryState):
     cover_text = f"Book cover for: {story.title}\n\nChapters: {', '.join(c.title for c in story.chapters)}"
     cover_prompt = make_image_prompt(cover_text)
     story.cover_image_url = generate_image(cover_prompt)
+    logger.info("Cover image URL: %s", story.cover_image_url)
     
     # Chapter images
     logger.info(f"Generating {len(story.chapters)} chapter images...")
@@ -160,9 +170,13 @@ def image_generation_node(state: StoryState):
         chapter_text = f"{chapter.title}\n\n{chapter.content[:1500]}"
         chapter_prompt = make_image_prompt(chapter_text)
         chapter.image_url = generate_image(chapter_prompt)
+        logger.info("Chapter %d image URL: %s", idx, chapter.image_url)
     
+    final_output = story.model_dump()
+    # Log completo del JSON final (portada + capítulos con URLs)
+    #logger.info("Final output JSON:\n%s", json.dumps(final_output, ensure_ascii=False, indent=2))
     logger.info("All images generated")
-    return {"final_output": story.model_dump()}
+    return {"final_output": final_output}
 
 # ============================================================================
 # WORKFLOW GRAPH
@@ -188,11 +202,13 @@ if __name__ == "__main__":
     
     try:
         result = graph.invoke({
-            "messages": [{"role": "user", "content": "Write a 3-chapter fantasy story about dragons"}]
+            "messages": [{"role": "user", "content": "Write a 3-chapter sci-fi story about robots"}]
         })
         logger.info("Workflow completed")
         
         final_output = result.get("final_output") or result
+        # Log del JSON también en ejecución directa
+        #logger.info("Final output JSON (main):\n%s", json.dumps(final_output, ensure_ascii=False, indent=2))
         
         with open("output.json", "w", encoding="utf-8") as f:
             json.dump(final_output, f, ensure_ascii=False, indent=2)
