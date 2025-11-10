@@ -19,7 +19,16 @@ load_dotenv()
 logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s [%(name)s] %(message)s")
 logger = logging.getLogger(__name__)
 
-client = OpenAI()
+# Cargar API keys desde variables de entorno
+openai_key = os.getenv("OPENAI_API_KEY")
+if not openai_key:
+    raise EnvironmentError("OPENAI_API_KEY not found. Set it in your .env file.")
+
+groq_key = os.getenv("GROQ_API_KEY")
+if not groq_key:
+    raise EnvironmentError("GROQ_API_KEY not found. Set it in your .env file.")
+
+client = OpenAI(api_key=openai_key)
 
 # ============================================================================
 # SCHEMAS
@@ -100,10 +109,6 @@ def make_image_prompt(text: str) -> str:
 # ============================================================================
 # AGENTS
 # ============================================================================
-groq_key = os.getenv("GROQ_API_KEY")
-if not groq_key:
-    raise EnvironmentError("GROQ_API_KEY not found. Set it in your .env file.")
-
 logger.info("Building story_agent (Groq)...")
 story_llm = ChatGroq(
     groq_api_key=groq_key,
@@ -202,7 +207,7 @@ if __name__ == "__main__":
     
     try:
         result = graph.invoke({
-            "messages": [{"role": "user", "content": "Write a 3-chapter sci-fi story about robots"}]
+            "messages": [{"role": "user", "content": "Write a 3-chapter sci-fi story about dragons in space."}]
         })
         logger.info("Workflow completed")
         
