@@ -281,8 +281,9 @@ async def generate_story_ai_images_jwt(
         except Exception as e:
             logger.warning("No se pudo guardar el cuento en la BD: %s", e)
         
-        return final_output
+        
         '''
+        return final_output
         
         
     except Exception as e:
