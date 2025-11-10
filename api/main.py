@@ -265,6 +265,8 @@ async def generate_story_ai_images_jwt(
         ).execute()
         logger.info("Crédito descontado. Créditos restantes: %d", credits - 1)
         
+       
+        '''
         # Opcional: Guardar el cuento en la base de datos
         try:
             supabase.table("stories").insert(
@@ -280,6 +282,8 @@ async def generate_story_ai_images_jwt(
             logger.warning("No se pudo guardar el cuento en la BD: %s", e)
         
         return final_output
+        '''
+        
         
     except Exception as e:
         logger.exception("Error ejecutando el workflow")
