@@ -57,8 +57,8 @@ IMAGE_MODELS = {
     "gpt-image-1": "gpt-image-1",
     "gpt-image-1-mini": "gpt-image-1-mini",
 }
-DEFAULT_IMAGE_MODEL = os.getenv("IMAGE_MODEL", "dall-e-2").strip().lower()
-SELECTED_IMAGE_MODEL = IMAGE_MODELS.get(DEFAULT_IMAGE_MODEL, "dall-e-2")
+DEFAULT_IMAGE_MODEL = os.getenv("IMAGE_MODEL", "dall-e-3").strip().lower()
+SELECTED_IMAGE_MODEL = IMAGE_MODELS.get(DEFAULT_IMAGE_MODEL, "dall-e-3")
 logger.info(f"Image model: {SELECTED_IMAGE_MODEL}")
 
 # ============================================================================
