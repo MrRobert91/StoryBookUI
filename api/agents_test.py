@@ -43,7 +43,7 @@ SUPABASE_PROJECT_REF = os.getenv("SUPABASE_PROJECT_REF", "qvzbjollfgllkxxzlsoa")
 SUPABASE_ANON_KEY = os.getenv("SUPABASE_ANON_KEY")
 SUPABASE_S3_ENDPOINT = f"https://{SUPABASE_PROJECT_REF}.storage.supabase.co/storage/v1/s3"
 SUPABASE_S3_REGION = "eu-central-1"
-STORAGE_BUCKET_NAME = os.getenv("STORAGE_BUCKET_NAME", "story-images")
+STORAGE_BUCKET_NAME = os.getenv("STORAGE_BUCKET_NAME", "cuentee_images")
 
 if not SUPABASE_ANON_KEY:
     logger.warning("SUPABASE_ANON_KEY not found. Image upload to Supabase will be disabled.")
