@@ -14,6 +14,12 @@ from dotenv import load_dotenv
 
 from langgraph.graph import StateGraph, START, END
 
+# Nuevas importaciones para S3/Supabase Storage
+import boto3
+from botocore.client import Config
+import requests
+import uuid
+
 # Setup
 load_dotenv()
 logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s [%(name)s] %(message)s")
@@ -29,6 +35,101 @@ if not groq_key:
     raise EnvironmentError("GROQ_API_KEY not found. Set it in your .env file.")
 
 client = OpenAI(api_key=openai_key)
+
+# ============================================================================
+# SUPABASE S3 STORAGE CONFIGURATION
+# ============================================================================
+SUPABASE_PROJECT_REF = os.getenv("SUPABASE_PROJECT_REF", "qvzbjollfgllkxxzlsoa")
+SUPABASE_ANON_KEY = os.getenv("SUPABASE_ANON_KEY")
+SUPABASE_S3_ENDPOINT = f"https://{SUPABASE_PROJECT_REF}.storage.supabase.co/storage/v1/s3"
+SUPABASE_S3_REGION = "eu-central-1"
+STORAGE_BUCKET_NAME = os.getenv("STORAGE_BUCKET_NAME", "story-images")
+
+if not SUPABASE_ANON_KEY:
+    logger.warning("SUPABASE_ANON_KEY not found. Image upload to Supabase will be disabled.")
+
+# Variable global para almacenar el JWT token del usuario actual
+_current_jwt_token = None
+_current_user_id = "anonymous"
+_current_story_id = None
+
+def set_user_context(user_id: str, jwt_token: str, story_id: str = None):
+    """Set user context for S3 uploads"""
+    global _current_jwt_token, _current_user_id, _current_story_id
+    _current_jwt_token = jwt_token
+    _current_user_id = user_id
+    _current_story_id = story_id or str(uuid.uuid4())
+    logger.info(f"User context set: user_id={user_id}, story_id={_current_story_id}")
+
+def get_s3_client():
+    """Create S3 client authenticated with Supabase credentials"""
+    if not SUPABASE_ANON_KEY:
+        raise EnvironmentError("SUPABASE_ANON_KEY not configured")
+    
+    session_token = _current_jwt_token or SUPABASE_ANON_KEY
+    
+    return boto3.client(
+        's3',
+        endpoint_url=SUPABASE_S3_ENDPOINT,
+        aws_access_key_id=SUPABASE_PROJECT_REF,
+        aws_secret_access_key=SUPABASE_ANON_KEY,
+        aws_session_token=session_token,
+        region_name=SUPABASE_S3_REGION,
+        config=Config(signature_version='s3v4')
+    )
+
+def upload_to_supabase_storage(image_url: str, image_type: str) -> str:
+    """
+    Download image from URL and upload to Supabase Storage.
+    
+    Args:
+        image_url: URL from OpenAI API
+        image_type: 'cover' or 'chapter_N'
+    
+    Returns:
+        Public URL of the uploaded image in Supabase Storage, or original URL if upload fails
+    """
+    if not image_url:
+        logger.warning("Empty image_url provided")
+        return ""
+    
+    if not SUPABASE_ANON_KEY:
+        logger.warning("Supabase not configured, returning original URL")
+        return image_url
+    
+    try:
+        # Download image from OpenAI
+        logger.info(f"Downloading image from OpenAI: {image_url[:80]}...")
+        response = requests.get(image_url, timeout=30)
+        response.raise_for_status()
+        image_data = response.content
+        logger.info(f"Image downloaded, size: {len(image_data)} bytes")
+        
+        # Generate filename
+        file_extension = "png"
+        unique_id = str(uuid.uuid4())[:8]
+        filename = f"{_current_user_id}/{_current_story_id}/{image_type}_{unique_id}.{file_extension}"
+        
+        logger.info(f"Uploading to Supabase Storage: {STORAGE_BUCKET_NAME}/{filename}")
+        
+        # Upload to Supabase S3
+        s3_client = get_s3_client()
+        s3_client.put_object(
+            Bucket=STORAGE_BUCKET_NAME,
+            Key=filename,
+            Body=image_data,
+            ContentType='image/png'
+        )
+        
+        # Construct public URL
+        public_url = f"https://{SUPABASE_PROJECT_REF}.supabase.co/storage/v1/object/public/{STORAGE_BUCKET_NAME}/{filename}"
+        
+        logger.info(f"✓ Image uploaded to Supabase Storage: {public_url}")
+        return public_url
+        
+    except Exception as e:
+        logger.exception(f"Error uploading to Supabase Storage, using original URL: {e}")
+        return image_url
 
 # ============================================================================
 # SCHEMAS
@@ -47,6 +148,8 @@ class StoryState(TypedDict):
     messages: list
     story_data: Story | None
     final_output: dict | None
+    user_id: str | None
+    jwt_token: str | None
 
 # ============================================================================
 # IMAGE MODEL CONFIGURATION
@@ -61,11 +164,32 @@ DEFAULT_IMAGE_MODEL = os.getenv("IMAGE_MODEL", "dall-e-3").strip().lower()
 SELECTED_IMAGE_MODEL = IMAGE_MODELS.get(DEFAULT_IMAGE_MODEL, "dall-e-3")
 logger.info(f"Image model: {SELECTED_IMAGE_MODEL}")
 
+
+# ============================================================================
+# CONFIGURATION
+# ============================================================================
+DEFAULT_NUM_CHAPTERS = int(os.getenv("NUM_CHAPTERS", "3"))
+WORDS_PER_CHAPTER = 250
+'''
+# Asegura estilo infantil ilustrado (no realista)
+CHILD_ILLUSTRATION_SUFFIX = (
+    "Child-friendly storybook illustration; whimsical, cartoon style; soft lines and rounded shapes; "
+    "bright pastel colors; friendly characters; no photorealistic, no realistic, no camera, no lens, "
+    "no photographic terms."
+)
+'''
+
+
 # ============================================================================
 # IMAGE GENERATION
 # ============================================================================
-def generate_image(prompt: str, model: str = None) -> str:
-    """Generate image using OpenAI API"""
+_image_counter = {"cover": 0, "chapter": 0}
+
+def generate_image(prompt: str, model: str = None, image_type: str = "image") -> str:
+    """
+    Generate image using OpenAI API and upload to Supabase Storage.
+    Returns the Supabase Storage URL instead of the temporary OpenAI URL.
+    """
     model_name = IMAGE_MODELS.get((model or SELECTED_IMAGE_MODEL).lower(), SELECTED_IMAGE_MODEL)
     logger.info(f"Generating image with {model_name}, prompt length: {len(prompt)}")
     
@@ -83,53 +207,61 @@ def generate_image(prompt: str, model: str = None) -> str:
             params["quality"] = "low"
             logger.debug(f"Added quality='low' for {model_name}")
         
+        # estilo vívido para DALL·E 3 (más ilustrativo que natural)
+        if model_name == "dall-e-3":
+            params["style"] = "vivid"
+        
+        # Generar imagen con OpenAI
         response = client.images.generate(**params)
-        logger.info(f"Image generation response: {response}") # Eliminar en producción
-        url = response.data[0].url
-        logger.info(f"Generated image: {url}")
-        return url
+        openai_url = response.data[0].url
+        logger.info(f"✓ OpenAI generated image: {openai_url[:80]}...")
+        
+        # Determinar tipo de imagen para nombrado
+        if image_type == "cover":
+            storage_type = "cover"
+        else:
+            _image_counter["chapter"] += 1
+            storage_type = f"chapter_{_image_counter['chapter']}"
+        
+        # Subir a Supabase Storage y obtener URL permanente
+        supabase_url = upload_to_supabase_storage(openai_url, storage_type)
+        
+        return supabase_url
+        
     except Exception as e:
         logger.error(f"Error generating image: {e}")
         return ""
 
 def make_image_prompt(text: str) -> str:
-    """Use LLM to create optimized DALL-E prompt from story text"""
+    """Use LLM to create an image prompt for children's illustrations (non-realistic)."""
     try:
         response = image_llm.invoke([
             {
-                "role": "system", 
+                "role": "system",
                 "content": (
                     "Create a concise image prompt suitable for children's books. "
-                    "The result MUST describe an illustration in a whimsical storybook/cartoon style, and appropriate for all ages. "
-                    "Use bright, pastel colors, soft lines, and magical elements. "
-                    "AVOID any scary, violent, dark, or realistic/photorealistic imagery. Focus on bright colors, friendly characters, "
-                    "and magical elements. Return only the prompt text."
-                )
+                    "The result MUST describe an illustration in a whimsical storybook/cartoon style. "
+                    "Use bright, pastel colors, soft lines, friendly characters, and magical elements. "
+                    "AVOID any scary, violent, dark, or realistic/photorealistic imagery. "
+                    "Do not mention cameras, lenses, or photographic terms. "
+                    "Return ONLY the prompt text."
+                ),
             },
-            {"role": "user", "content": f"Story text:\n\n{text[:2000]}"}
+            {"role": "user", "content": f"Story text:\n\n{text[:2000]}"},
         ])
-        prompt = response.content.strip() if hasattr(response, 'content') else text[:500]
-        logger.debug(f"Generated child-friendly prompt: {prompt[:200]}")
+        prompt = response.content.strip() if hasattr(response, "content") else str(response).strip()
+        
+        
+        logger.debug("Child-friendly prompt: %s", prompt[:200])
         return prompt
     except Exception as e:
-        logger.error(f"Error creating image prompt: {e}")
-        return text[:500]
-
-# ============================================================================
-# CONFIGURATION
-# ============================================================================
-DEFAULT_NUM_CHAPTERS = int(os.getenv("NUM_CHAPTERS", "3"))
-WORDS_PER_CHAPTER = 250
+        logger.error("Error creating image prompt: %s", e)
+        base = (text[:500] if text else "A friendly fantasy scene")
+        return f"{base}"
 
 # ============================================================================
 # AGENTS
 # ============================================================================
-'''
-groq_key = os.getenv("GROQ_API_KEY")
-if not groq_key:
-    raise EnvironmentError("GROQ_API_KEY not found. Set it in your .env file.")
-
-'''
 logger.info("Building story_agent (Groq)...")
 story_llm = ChatGroq(
     groq_api_key=groq_key,
@@ -179,13 +311,7 @@ def story_generation_node(state: StoryState):
     """Generate story text using Groq LLM"""
     logger.info("Node: story_generation")
     messages = state.get("messages", [])
-    '''
-     # Añadir instrucción explícita sobre número de capítulos si no está en el mensaje
-    user_message = messages[0]["content"] if messages else ""
-    if "chapter" not in user_message.lower():
-        enhanced_message = f"{user_message}. Generate exactly {DEFAULT_NUM_CHAPTERS} chapters, each with approximately {WORDS_PER_CHAPTER} words."
-        messages = [{"role": "user", "content": enhanced_message}]
-    '''
+    
     logger.info(f"Invoking story_agent with messages: {messages}")
     
     result = story_agent.invoke({"messages": messages})
@@ -200,8 +326,19 @@ def story_generation_node(state: StoryState):
     return {"story_data": story}
 
 def image_generation_node(state: StoryState):
-    """Generate images for cover and chapters"""
+    """Generate images for cover and chapters and upload to Supabase Storage"""
     logger.info("Node: image_generation")
+    
+    # Configurar contexto de usuario para S3
+    user_id = state.get("user_id", "anonymous")
+    jwt_token = state.get("jwt_token")
+    story_id = str(uuid.uuid4())
+    set_user_context(user_id, jwt_token, story_id)
+    
+    # Reset counters
+    _image_counter["cover"] = 0
+    _image_counter["chapter"] = 0
+    
     story = state.get("story_data")
     
     if not story:
@@ -212,8 +349,8 @@ def image_generation_node(state: StoryState):
     logger.info("Generating cover image...")
     cover_text = f"Book cover for: {story.title}\n\nChapters: {', '.join(c.title for c in story.chapters)}"
     cover_prompt = make_image_prompt(cover_text)
-    story.cover_image_url = generate_image(cover_prompt)
-    logger.info("Cover image URL: %s", story.cover_image_url)
+    story.cover_image_url = generate_image(cover_prompt, image_type="cover")
+    logger.info("Cover image URL (Supabase): %s", story.cover_image_url)
     
     # Chapter images
     logger.info(f"Generating {len(story.chapters)} chapter images...")
@@ -221,13 +358,13 @@ def image_generation_node(state: StoryState):
         logger.info(f"Chapter {idx}: {chapter.title}")
         chapter_text = f"{chapter.title}\n\n{chapter.content[:1500]}"
         chapter_prompt = make_image_prompt(chapter_text)
-        chapter.image_url = generate_image(chapter_prompt)
-        logger.info("Chapter %d image URL: %s", idx, chapter.image_url)
+        chapter.image_url = generate_image(chapter_prompt, image_type="chapter")
+        logger.info("Chapter %d image URL (Supabase): %s", idx, chapter.image_url)
     
     final_output = story.model_dump()
-    # Log completo del JSON final (portada + capítulos con URLs)
-    #logger.info("Final output JSON:\n%s", json.dumps(final_output, ensure_ascii=False, indent=2))
-    logger.info("All images generated")
+    final_output["story_id"] = story_id
+    
+    logger.info("All images generated and uploaded to Supabase Storage")
     return {"final_output": final_output}
 
 # ============================================================================
@@ -254,13 +391,13 @@ if __name__ == "__main__":
     
     try:
         result = graph.invoke({
-            "messages": [{"role": "user", "content": "Write a sci-fi story about dragons in space."}]
+            "messages": [{"role": "user", "content": "Write a sci-fi story about dragons in space."}],
+            "user_id": "test_user",
+            "jwt_token": None  # En test mode usa anon key
         })
         logger.info("Workflow completed")
         
         final_output = result.get("final_output") or result
-        # Log del JSON también en ejecución directa
-        #logger.info("Final output JSON (main):\n%s", json.dumps(final_output, ensure_ascii=False, indent=2))
         
         with open("output.json", "w", encoding="utf-8") as f:
             json.dump(final_output, f, ensure_ascii=False, indent=2)

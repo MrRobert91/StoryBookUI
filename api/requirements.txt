@@ -11,3 +11,5 @@ pydantic
 typing-extensions
 langgraph
 python-dotenv
+boto3
+requests
