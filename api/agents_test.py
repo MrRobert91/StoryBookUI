@@ -46,11 +46,11 @@ SUPABASE_S3_REGION = "eu-central-1"
 STORAGE_BUCKET_NAME = os.getenv("STORAGE_BUCKET_NAME", "cuentee_images")
 
 if not SUPABASE_ANON_KEY:
-    logger.warning("SUPABASE_ANON_KEY not found. Image upload to Supabase will be disabled.")
+    raise EnvironmentError("SUPABASE_ANON_KEY not found. Set it in your .env file.")
 
-# Variable global para almacenar el JWT token del usuario actual
+# Variable global para almacenar el contexto del usuario actual
 _current_jwt_token = None
-_current_user_id = "anonymous"
+_current_user_id = None
 _current_story_id = None
 
 def set_user_context(user_id: str, jwt_token: str, story_id: str = None):
@@ -62,25 +62,31 @@ def set_user_context(user_id: str, jwt_token: str, story_id: str = None):
     logger.info(f"User context set: user_id={user_id}, story_id={_current_story_id}")
 
 def get_s3_client():
-    """Create S3 client authenticated with Supabase credentials"""
+    """
+    Create S3 client authenticated with user's JWT token.
+    This respects RLS policies in Supabase Storage.
+    """
     if not SUPABASE_ANON_KEY:
         raise EnvironmentError("SUPABASE_ANON_KEY not configured")
     
-    session_token = _current_jwt_token or SUPABASE_ANON_KEY
+    if not _current_jwt_token:
+        raise EnvironmentError("JWT token not set. Call set_user_context() first.")
+    
+    logger.info(f"Creating S3 client for user: {_current_user_id}")
     
     return boto3.client(
         's3',
         endpoint_url=SUPABASE_S3_ENDPOINT,
         aws_access_key_id=SUPABASE_PROJECT_REF,
         aws_secret_access_key=SUPABASE_ANON_KEY,
-        aws_session_token=session_token,
+        aws_session_token=_current_jwt_token,  # ✅ JWT del usuario autenticado
         region_name=SUPABASE_S3_REGION,
         config=Config(signature_version='s3v4')
     )
 
 def upload_to_supabase_storage(image_url: str, image_type: str) -> str:
     """
-    Download image from URL and upload to Supabase Storage.
+    Download image from URL and upload to Supabase Storage using user's JWT.
     
     Args:
         image_url: URL from OpenAI API
@@ -93,8 +99,8 @@ def upload_to_supabase_storage(image_url: str, image_type: str) -> str:
         logger.warning("Empty image_url provided")
         return ""
     
-    if not SUPABASE_ANON_KEY:
-        logger.warning("Supabase not configured, returning original URL")
+    if not _current_user_id or not _current_jwt_token:
+        logger.error("User context not set. Cannot upload to Supabase.")
         return image_url
     
     try:
@@ -105,14 +111,14 @@ def upload_to_supabase_storage(image_url: str, image_type: str) -> str:
         image_data = response.content
         logger.info(f"Image downloaded, size: {len(image_data)} bytes")
         
-        # Generate filename
+        # Generate filename: user_id/story_id/image_type_uuid.png
         file_extension = "png"
         unique_id = str(uuid.uuid4())[:8]
         filename = f"{_current_user_id}/{_current_story_id}/{image_type}_{unique_id}.{file_extension}"
         
         logger.info(f"Uploading to Supabase Storage: {STORAGE_BUCKET_NAME}/{filename}")
         
-        # Upload to Supabase S3
+        # Upload to Supabase S3 with user's JWT (RLS applied)
         s3_client = get_s3_client()
         s3_client.put_object(
             Bucket=STORAGE_BUCKET_NAME,
@@ -128,7 +134,8 @@ def upload_to_supabase_storage(image_url: str, image_type: str) -> str:
         return public_url
         
     except Exception as e:
-        logger.exception(f"Error uploading to Supabase Storage, using original URL: {e}")
+        logger.exception(f"Error uploading to Supabase Storage: {e}")
+        # Fallback to original URL
         return image_url
 
 # ============================================================================
@@ -329,9 +336,15 @@ def image_generation_node(state: StoryState):
     """Generate images for cover and chapters and upload to Supabase Storage"""
     logger.info("Node: image_generation")
     
-    # Configurar contexto de usuario para S3
-    user_id = state.get("user_id", "anonymous")
+    # ✅ Obtener user_id y jwt_token del estado
+    user_id = state.get("user_id")
     jwt_token = state.get("jwt_token")
+    
+    if not user_id or not jwt_token:
+        logger.error("user_id or jwt_token not provided in state")
+        raise ValueError("user_id and jwt_token are required for image generation")
+    
+    # Configurar contexto de usuario para S3
     story_id = str(uuid.uuid4())
     set_user_context(user_id, jwt_token, story_id)
     
@@ -363,6 +376,7 @@ def image_generation_node(state: StoryState):
     
     final_output = story.model_dump()
     final_output["story_id"] = story_id
+    final_output["user_id"] = user_id  # ✅ Incluir para referencia
     
     logger.info("All images generated and uploaded to Supabase Storage")
     return {"final_output": final_output}

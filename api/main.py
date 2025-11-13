@@ -244,8 +244,11 @@ async def generate_story_ai_images_jwt(
     try:
         logger.info("Invocando workflow con prompt: %s", req.prompt[:100])
         
+        # PASAR user_id y jwt_token al workflow
         result = graph.invoke({
-            "messages": [{"role": "user", "content": req.prompt}]
+            "messages": [{"role": "user", "content": req.prompt}],
+            "user_id": user_id,      # UUID del usuario autenticado
+            "jwt_token": token       # JWT para S3 con RLS
         })
         
         final_output = result.get("final_output")
@@ -284,7 +287,6 @@ async def generate_story_ai_images_jwt(
         
         '''
         return final_output
-        
         
     except Exception as e:
         logger.exception("Error ejecutando el workflow")
