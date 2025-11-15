@@ -175,7 +175,7 @@ logger.info(f"Image model: {SELECTED_IMAGE_MODEL}")
 # ============================================================================
 # CONFIGURATION
 # ============================================================================
-DEFAULT_NUM_CHAPTERS = int(os.getenv("NUM_CHAPTERS", "3"))
+DEFAULT_NUM_CHAPTERS = int(os.getenv("NUM_CHAPTERS", "4"))
 WORDS_PER_CHAPTER = 250
 '''
 # Asegura estilo infantil ilustrado (no realista)
