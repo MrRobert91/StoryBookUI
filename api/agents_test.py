@@ -148,7 +148,7 @@ class Chapter(BaseModel):
 
 class Story(BaseModel):
     title: str = Field(description="Story title")
-    #cover_image_url: str | None = None
+    cover_image_url: str | None = None
     chapters: List[Chapter] = Field(description="List of story chapters")
 
 class StoryState(TypedDict):
