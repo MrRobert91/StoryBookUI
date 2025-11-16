@@ -144,11 +144,13 @@ def upload_to_supabase_storage(image_url: str, image_type: str) -> str:
 class Chapter(BaseModel):
     title: str = Field(description="Chapter title")
     content: str = Field(description="Chapter content/story text")
-    image_url: str | None = None
+    image_url: str | None = Field(default=None, description="URL of chapter illustration")
 
 class Story(BaseModel):
+    model_config = {"validate_assignment": True}  #  Permite asignación después de crear
+    
     title: str = Field(description="Story title")
-    cover_image_url: str | None = None
+    cover_image_url: str | None = Field(default=None, description="URL of cover image")  # Añadido
     chapters: List[Chapter] = Field(description="List of story chapters")
 
 class StoryState(TypedDict):
