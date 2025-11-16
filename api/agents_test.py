@@ -291,7 +291,9 @@ Example structure:
   "title": "The Dragon's Adventure",
   "chapters": [
     {{"title": "Chapter 1: The Discovery", "content": "Once upon a time..."}},
-    {{"title": "Chapter 2: The Journey", "content": "The young dragon..."}}
+    {{"title": "Chapter 2: The Journey", "content": "The young dragon..."}},
+    {{"title": "Chapter 3: The Challenge", "content": "The dragon faced a challenge..."}},
+    {{"title": "Chapter 4: The Triumph", "content": "The dragon triumphed..."}}
   ]
 }}"""
 
