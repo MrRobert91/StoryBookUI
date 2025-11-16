@@ -79,7 +79,7 @@ def get_s3_client():
         endpoint_url=SUPABASE_S3_ENDPOINT,
         aws_access_key_id=SUPABASE_PROJECT_REF,
         aws_secret_access_key=SUPABASE_ANON_KEY,
-        aws_session_token=_current_jwt_token,  # ✅ JWT del usuario autenticado
+        aws_session_token=_current_jwt_token,  # JWT del usuario autenticado
         region_name=SUPABASE_S3_REGION,
         config=Config(signature_version='s3v4')
     )
@@ -299,12 +299,8 @@ Example structure:
   ]
 }}"""
 
-story_agent = create_agent(
-    model=story_llm,
-    tools=[],
-    response_format=Story,
-    system_prompt=story_system_prompt
-)
+#  CAMBIO: No usar create_agent, usar with_structured_output directamente
+story_agent = story_llm.with_structured_output(Story)
 logger.info(f"story_agent ready (configured for {DEFAULT_NUM_CHAPTERS} chapters, ~{WORDS_PER_CHAPTER} words each)")
 
 logger.info("Building image_llm (Groq)...")
@@ -323,24 +319,35 @@ def story_generation_node(state: StoryState):
     logger.info("Node: story_generation")
     messages = state.get("messages", [])
     
-    logger.info(f"Invoking story_agent with messages: {messages}")
+    # Construir mensajes con system prompt
+    full_messages = [
+        {"role": "system", "content": story_system_prompt},
+        *messages
+    ]
     
-    result = story_agent.invoke({"messages": messages})
-    logger.info("story_agent responded")
+    user_prompt = messages[0]['content'] if messages else ""
+    logger.info(f"Invoking story_agent with prompt: {user_prompt[:100]}...")
     
-    # Extract structured Story from result
-    story = result.get("structured_response") or result.get("story_data") or result
-    if isinstance(story, dict):
-        story = Story(**story)
-    
-    logger.info(f"Story generated: {story.title}, {len(story.chapters)} chapters")
-    return {"story_data": story}
+    try:
+        # Invocar directamente con structured output
+        story = story_agent.invoke(full_messages)
+        
+        if not story or not isinstance(story, Story):
+            logger.error("Invalid story response from LLM")
+            raise ValueError("Failed to generate valid story structure")
+        
+        logger.info(f"Story generated: {story.title}, {len(story.chapters)} chapters")
+        return {"story_data": story}
+        
+    except Exception as e:
+        logger.exception(f"Error generating story: {e}")
+        raise
 
 def image_generation_node(state: StoryState):
     """Generate images for cover and chapters and upload to Supabase Storage"""
     logger.info("Node: image_generation")
     
-    # ✅ Obtener user_id y jwt_token del estado
+    # Obtener user_id y jwt_token del estado
     user_id = state.get("user_id")
     jwt_token = state.get("jwt_token")
     
