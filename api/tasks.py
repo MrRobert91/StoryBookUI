@@ -1,8 +1,8 @@
 import os
 import json
 import logging
-from celery_app import celery_app
-from agents_test import graph
+from api.celery_app import celery_app
+from api.agents_test import graph
 from supabase import create_client
 
 logger = logging.getLogger(__name__)

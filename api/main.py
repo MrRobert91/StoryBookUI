@@ -12,7 +12,8 @@ from datetime import datetime, timezone, timedelta
 import logging
 from agents_test import graph, StoryState
 from celery.result import AsyncResult
-from tasks import generate_story_task
+from api.celery_app import celery_app
+from api.tasks import generate_story_task  # Change 'from tasks' to 'from api.tasks'
 
 app = FastAPI()
 app.add_middleware(
