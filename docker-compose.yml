@@ -4,19 +4,22 @@ services:
     build: ./api
     ports:
       - '8000:8000'
+    command: uvicorn api.main:app --host 0.0.0.0 --port 8000 --reload
     environment:
       - OPENAI_API_KEY=${OPENAI_API_KEY}
       - GROQ_API_KEY=${GROQ_API_KEY}
       - SUPABASE_URL=${SUPABASE_URL}
       - SUPABASE_KEY=${SUPABASE_KEY}
       - REDIS_URL=${REDIS_URL}
+      - PYTHONPATH=/app
 
   worker:
     build: ./api
-    command: celery -A celery_app worker --loglevel=info
+    command: celery -A api.tasks worker --loglevel=info --pool=solo
     environment:
       - OPENAI_API_KEY=${OPENAI_API_KEY}
       - GROQ_API_KEY=${GROQ_API_KEY}
       - SUPABASE_URL=${SUPABASE_URL}
       - SUPABASE_KEY=${SUPABASE_KEY}
       - REDIS_URL=${REDIS_URL}
+      - PYTHONPATH=/app
