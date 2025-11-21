@@ -11,6 +11,8 @@ import asyncio
 from datetime import datetime, timezone, timedelta
 import logging
 from agents_test import graph, StoryState
+from celery.result import AsyncResult
+from tasks import generate_story_task
 
 app = FastAPI()
 app.add_middleware(
@@ -294,6 +296,60 @@ async def generate_story_ai_images_jwt(
             status_code=500,
             detail=f"Error generando el cuento: {str(e)}"
         )
+
+
+class StoryRequest(BaseModel):
+    topic: str
+    model: str = "dall-e-3"
+
+@app.post("/generate-story-async")
+async def generate_story_async(
+    request: StoryRequest,
+    authorization: str = Header(None)
+):
+    if not authorization:
+        raise HTTPException(status_code=401, detail="Missing Authorization header")
+    
+    token = authorization.replace("Bearer ", "")
+    
+    # Verify user
+    try:
+        user = supabase.auth.get_user(token)
+        user_id = user.user.id
+    except Exception as e:
+        raise HTTPException(status_code=401, detail=f"Invalid token: {str(e)}")
+
+    # Check credits
+    profile = supabase.table("profiles").select("credits").eq("id", user_id).single().execute()
+    if not profile.data or profile.data["credits"] < 1:
+        raise HTTPException(status_code=402, detail="Insufficient credits")
+
+    # Enqueue task
+    task = generate_story_task.delay(
+        topic=request.topic,
+        user_id=user_id,
+        jwt_token=token,
+        model=request.model
+    )
+    
+    return {"task_id": task.id, "status": "processing"}
+
+@app.get("/tasks/{task_id}")
+async def get_task_status(task_id: str):
+    task_result = AsyncResult(task_id)
+    
+    response = {
+        "task_id": task_id,
+        "status": task_result.status,
+        "result": None
+    }
+    
+    if task_result.status == 'SUCCESS':
+        response["result"] = task_result.result
+    elif task_result.status == 'FAILURE':
+        response["error"] = str(task_result.result)
+        
+    return response
 
 
 async def refill_plus_credits():

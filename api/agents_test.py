@@ -159,6 +159,7 @@ class StoryState(TypedDict):
     final_output: dict | None
     user_id: str | None
     jwt_token: str | None
+    model: str | None
 
 # ============================================================================
 # IMAGE MODEL CONFIGURATION
@@ -364,6 +365,7 @@ def image_generation_node(state: StoryState):
     _image_counter["chapter"] = 0
     
     story = state.get("story_data")
+    model = state.get("model")
     
     if not story:
         logger.error("No story_data in state")
@@ -373,7 +375,7 @@ def image_generation_node(state: StoryState):
     logger.info("Generating cover image...")
     cover_text = f"Book cover for: {story.title}\n\nChapters: {', '.join(c.title for c in story.chapters)}"
     cover_prompt = make_image_prompt(cover_text)
-    story.cover_image_url = generate_image(cover_prompt, image_type="cover")
+    story.cover_image_url = generate_image(cover_prompt, image_type="cover", model=model)
     logger.info("Cover image URL (Supabase): %s", story.cover_image_url)
     
     # Chapter images
@@ -382,7 +384,7 @@ def image_generation_node(state: StoryState):
         logger.info(f"Chapter {idx}: {chapter.title}")
         chapter_text = f"{chapter.title}\n\n{chapter.content[:1500]}"
         chapter_prompt = make_image_prompt(chapter_text)
-        chapter.image_url = generate_image(chapter_prompt, image_type="chapter")
+        chapter.image_url = generate_image(chapter_prompt, image_type="chapter", model=model)
         logger.info("Chapter %d image URL (Supabase): %s", idx, chapter.image_url)
     
     final_output = story.model_dump()
