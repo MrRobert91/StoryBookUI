@@ -14,8 +14,9 @@ services:
       - PYTHONPATH=/app
 
   worker:
-    build: ./api
-    command: celery -A api.tasks worker --loglevel=info --pool=solo
+    build:
+      context: ./api
+      dockerfile: Dockerfile.worker
     environment:
       - OPENAI_API_KEY=${OPENAI_API_KEY}
       - GROQ_API_KEY=${GROQ_API_KEY}

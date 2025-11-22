@@ -326,12 +326,14 @@ async def generate_story_async(
         raise HTTPException(status_code=402, detail="Insufficient credits")
 
     # Enqueue task
+    logger.info(f"📤 Enqueuing task for user {user_id}, topic: {request.topic}")
     task = generate_story_task.delay(
         topic=request.topic,
         user_id=user_id,
         jwt_token=token,
         model=request.model
     )
+    logger.info(f"✅ Task enqueued successfully. Task ID: {task.id}")
     
     return {"task_id": task.id, "status": "processing"}
 

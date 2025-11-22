@@ -16,7 +16,8 @@ if SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY:
 
 @celery_app.task(bind=True, name="generate_story_task")
 def generate_story_task(self, topic: str, user_id: str, jwt_token: str, model: str = "dall-e-3"):
-    logger.info(f"Starting story generation for user {user_id} with topic: {topic}")
+    logger.info(f" [Task {self.request.id}] STARTED for user {user_id}")
+    logger.info(f" [Task {self.request.id}] Params: topic='{topic}', model='{model}'")
     
     try:
         # Invoke LangGraph workflow
