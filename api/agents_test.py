@@ -327,8 +327,9 @@ def story_generation_node(state: StoryState):
         *messages
     ]
     
-    user_prompt = messages[0]['content'] if messages else ""
-    logger.info(f"Invoking story_agent with prompt: {user_prompt[:100]}...")
+
+    user_content = messages[0]['content'] if messages else "No content"
+    logger.info(f" [LLM Input] Sending prompt to Groq: '{user_content}'")
     
     try:
         # Invocar directamente con structured output
