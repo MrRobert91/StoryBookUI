@@ -9,6 +9,7 @@ from typing_extensions import TypedDict
 from langchain.agents import create_agent
 from langchain_groq import ChatGroq
 from openai import OpenAI
+import json
 import os
 from dotenv import load_dotenv
 
@@ -301,7 +302,7 @@ Example structure:
 }}"""
 
 #  CAMBIO: No usar create_agent, usar with_structured_output directamente
-story_agent = story_llm.with_structured_output(Story)
+story_agent = story_llm.with_structured_output(Story, method="json_mode")
 logger.info(f"story_agent ready (configured for {DEFAULT_NUM_CHAPTERS} chapters, ~{WORDS_PER_CHAPTER} words each)")
 
 logger.info("Building image_llm (Groq)...")
