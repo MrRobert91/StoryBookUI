@@ -1,0 +1,49 @@
+# Git
+.git
+.gitignore
+.gitattributes
+
+# Node
+node_modules
+npm-debug.log
+pnpm-debug.log
+yarn-debug.log
+yarn-error.log
+
+# Next.js
+.next
+out
+dist
+
+# Build artifacts
+.turbo
+.vercel
+
+# IDE
+.vscode
+.idea
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Environment (don't copy to container)
+.env.local
+.env.*.local
+.env
+
+# Testing
+.coverage
+jest.config.js
+
+# CI/CD
+.github
+.gitlab-ci.yml
+.circleci
+
+# Development
+README.md
+LICENSE

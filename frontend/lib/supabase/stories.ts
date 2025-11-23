@@ -1,0 +1,202 @@
+import { supabase, createAnonymousClient } from "./client"
+
+export interface Story {
+  id: string
+  user_id: string
+  title: string
+  content: string
+  prompt?: string
+  visibility: "public" | "private"
+  created_at: string
+  updated_at: string
+}
+
+export interface Chapter {
+  title: string
+  text: string
+}
+
+export interface PaginatedStoriesResult {
+  stories: Story[]
+  totalCount: number
+  totalPages: number
+  currentPage: number
+  hasNextPage: boolean
+  hasPreviousPage: boolean
+}
+
+// Client-side story operations only
+export const storyOperations = {
+  // Save a new story
+  async saveStory(
+    userId: string, // Recibe userId como argumento
+    title: string,
+    content: string | Chapter[] | Record<string, any>, // Accept full JSON objects
+    prompt?: string,
+  ): Promise<{ data: Story | null; error: any }> {
+    if (!supabase) {
+      return { data: null, error: new Error("Supabase not configured") }
+    }
+    if (!userId) {
+      return { data: null, error: new Error("User ID is required to save story.") }
+    }
+
+    try {
+      let contentString: string
+      if (typeof content === "string") {
+        contentString = content
+      } else if (Array.isArray(content)) {
+        // Legacy: convert chapters array to markdown string
+        contentString = content.map((chapter) => `# ${chapter.title}\n\n${chapter.text}`).join("\n\n---\n\n")
+      } else if (typeof content === "object" && content !== null) {
+        contentString = JSON.stringify(content, null, 2)
+      } else {
+        contentString = String(content)
+      }
+
+      const storyTitle = title || `Story from ${new Date().toLocaleDateString()}`
+
+      const { data, error } = await supabase
+        .from("stories")
+        .insert({
+          user_id: userId,
+          title: storyTitle,
+          content: contentString,
+          prompt: prompt || null,
+          visibility: "private",
+        })
+        .select()
+        .single()
+
+      return { data, error }
+    } catch (error) {
+      console.error("Error saving story:", error)
+      return { data: null, error }
+    }
+  },
+
+  // Get all stories for current user
+  async getUserStories(userId: string): Promise<{ data: Story[] | null; error: any }> {
+    if (!supabase) {
+      return { data: null, error: new Error("Supabase not configured") }
+    }
+    if (!userId) {
+      return { data: null, error: new Error("User ID is required to fetch stories.") }
+    }
+
+    try {
+      const { data, error } = await supabase
+        .from("stories")
+        .select("*")
+        .eq("user_id", userId) // Usar el userId pasado
+        .order("created_at", { ascending: false })
+
+      return { data, error }
+    } catch (error) {
+      console.error("Error fetching stories:", error)
+      return { data: null, error }
+    }
+  },
+
+  // Get public stories with pagination (accessible to all users, including anonymous)
+  async getPublicStories(page = 1, limit = 12): Promise<{ data: PaginatedStoriesResult | null; error: any }> {
+    // Try to use the main client first, fallback to anonymous client
+    let client = supabase
+
+    if (!client) {
+      client = createAnonymousClient()
+      if (!client) {
+        return { data: null, error: new Error("Supabase not configured") }
+      }
+    }
+
+    try {
+      const offset = (page - 1) * limit
+
+      console.log("Fetching public stories with client:", !!client)
+
+      // Get total count of public stories
+      const { count, error: countError } = await client
+        .from("stories")
+        .select("*", { count: "exact", head: true })
+        .eq("visibility", "public")
+
+      if (countError) {
+        console.error("Error getting count:", countError)
+        throw countError
+      }
+
+      console.log("Total public stories count:", count)
+
+      // Get paginated public stories
+      const { data, error } = await client
+        .from("stories")
+        .select("*")
+        .eq("visibility", "public")
+        .order("created_at", { ascending: false })
+        .range(offset, offset + limit - 1)
+
+      if (error) {
+        console.error("Error getting stories:", error)
+        throw error
+      }
+
+      console.log("Fetched stories:", data?.length || 0)
+
+      const totalCount = count || 0
+      const totalPages = Math.ceil(totalCount / limit)
+
+      const result: PaginatedStoriesResult = {
+        stories: data || [],
+        totalCount,
+        totalPages,
+        currentPage: page,
+        hasNextPage: page < totalPages,
+        hasPreviousPage: page > 1,
+      }
+
+      return { data: result, error: null }
+    } catch (error) {
+      console.error("Error fetching public stories:", error)
+      return { data: null, error }
+    }
+  },
+
+  // Update story visibility
+  async updateStoryVisibility(
+    storyId: string,
+    visibility: "public" | "private",
+  ): Promise<{ data: Story | null; error: any }> {
+    if (!supabase) {
+      return { data: null, error: new Error("Supabase not configured") }
+    }
+    if (!storyId) {
+      return { data: null, error: new Error("Story ID is required to update visibility.") }
+    }
+
+    try {
+      const { data, error } = await supabase.from("stories").update({ visibility }).eq("id", storyId).select().single()
+
+      return { data, error }
+    } catch (error) {
+      console.error("Error updating story visibility:", error)
+      return { data: null, error }
+    }
+  },
+
+  // Delete a story
+  async deleteStory(storyId: string): Promise<{ error: any }> {
+    if (!supabase) {
+      return { error: new Error("Supabase not configured") }
+    }
+
+    try {
+      const { error } = await supabase.from("stories").delete().eq("id", storyId)
+
+      return { error }
+    } catch (error) {
+      console.error("Error deleting story:", error)
+      return { error }
+    }
+  },
+}

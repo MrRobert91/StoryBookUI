@@ -1,0 +1,78 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: cuentee-config
+data:
+  NEXT_PUBLIC_SUPABASE_URL: "https://your-project.supabase.co"
+  NODE_ENV: "production"
+
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: cuentee-secrets
+type: Opaque
+stringData:
+  NEXT_PUBLIC_SUPABASE_ANON_KEY: "your-anon-key"
+  SUPABASE_SERVICE_ROLE_KEY: "your-service-role-key"
+  SUPABASE_JWT_SECRET: "your-jwt-secret"
+  NEXT_PUBLIC_FASTAPI_URL: "https://your-api.com"
+
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: cuentee
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: cuentee
+  template:
+    metadata:
+      labels:
+        app: cuentee
+    spec:
+      containers:
+      - name: cuentee
+        image: your-registry/cuentee:latest
+        ports:
+        - containerPort: 3000
+        envFrom:
+        - configMapRef:
+            name: cuentee-config
+        - secretRef:
+            name: cuentee-secrets
+        livenessProbe:
+          httpGet:
+            path: /
+            port: 3000
+          initialDelaySeconds: 30
+          periodSeconds: 10
+        readinessProbe:
+          httpGet:
+            path: /
+            port: 3000
+          initialDelaySeconds: 5
+          periodSeconds: 5
+        resources:
+          requests:
+            memory: "256Mi"
+            cpu: "250m"
+          limits:
+            memory: "1Gi"
+            cpu: "1000m"
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: cuentee-service
+spec:
+  selector:
+    app: cuentee
+  type: LoadBalancer
+  ports:
+  - protocol: TCP
+    port: 80
+    targetPort: 3000
