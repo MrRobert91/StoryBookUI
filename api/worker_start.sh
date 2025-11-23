@@ -31,5 +31,8 @@ HTTP_PID=$!
 
 # Iniciar el worker de Celery
 # Usamos 'exec' para que Celery sea el proceso principal (PID 1) después del script
-echo "Starting Celery worker..."
-exec celery -A api.tasks worker --loglevel=info --pool=solo
+# Generar un hostname único usando el hostname del contenedor (que suele ser único o aleatorio)
+HOSTNAME=$(hostname)
+echo "Starting Celery worker with hostname: celery@$HOSTNAME"
+
+exec celery -A api.tasks worker --loglevel=info --pool=solo -n "celery@$HOSTNAME"
