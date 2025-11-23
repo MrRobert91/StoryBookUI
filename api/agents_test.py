@@ -328,7 +328,18 @@ def story_generation_node(state: StoryState):
     ]
     
 
-    user_content = messages[0]['content'] if messages else "No content"
+    user_content = "No content"
+    if messages:
+        first_msg = messages[0]
+        if isinstance(first_msg, dict):
+            user_content = first_msg.get('content', "No content")
+        elif isinstance(first_msg, tuple) and len(first_msg) > 1:
+             user_content = first_msg[1]
+        elif hasattr(first_msg, 'content'):
+             user_content = first_msg.content
+        else:
+             user_content = str(first_msg)
+
     logger.info(f" [LLM Input] Sending prompt to Groq: '{user_content}'")
     
     try:

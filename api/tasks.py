@@ -28,7 +28,7 @@ def generate_story_task(self, topic: str, user_id: str, jwt_token: str, model: s
         # 1. Invocar Workflow
         logger.info(f"🤖 [Task {task_id}] Invoking LangGraph workflow...")
         result = graph.invoke({
-            "messages": [("user", topic)],
+            "messages": [{"role": "user", "content": topic}],
             "user_id": user_id,
             "jwt_token": jwt_token,
             "model": model
