@@ -27,6 +27,9 @@ celery_app.conf.update(
     result_serializer="json",
     timezone="UTC",
     enable_utc=True,
-    broker_pool_limit=None,
+    broker_pool_limit=1,
     broker_connection_retry_on_startup=True,
+    worker_concurrency=1,
+    broker_transport_options={"max_connections": 2},
+    result_backend_transport_options={"max_connections": 2},
 )
