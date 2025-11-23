@@ -51,16 +51,16 @@ def generate_story_task(self, topic: str, user_id: str, jwt_token: str, model: s
         
         # 2. Guardar en Base de Datos
         if supabase_admin:
-            logger.info(f"💾 [Task {task_id}] Saving to Supabase 'stories' table...")
+            # logger.info(f"💾 [Task {task_id}] Saving to Supabase 'stories' table...")
             try:
-                db_response = supabase_admin.table("stories").insert({
-                    "user_id": user_id,
-                    "title": title,
-                    "content": json.dumps(story_json),
-                    "prompt": topic,
-                }).execute()
+                # db_response = supabase_admin.table("stories").insert({
+                #     "user_id": user_id,
+                #     "title": title,
+                #     "content": json.dumps(story_json),
+                #     "prompt": topic,
+                # }).execute()
                 
-                logger.info(f" [Task {task_id}] Story saved to DB. ID: {db_response.data[0].get('id') if db_response.data else 'Unknown'}")
+                # logger.info(f" [Task {task_id}] Story saved to DB. ID: {db_response.data[0].get('id') if db_response.data else 'Unknown'}")
                 
                 # 3. Descontar Créditos
                 logger.info(f" [Task {task_id}] Checking user credits...")
