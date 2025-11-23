@@ -27,4 +27,7 @@ celery_app.conf.update(
     result_serializer="json",
     timezone="UTC",
     enable_utc=True,
+    broker_pool_limit=1,
+    redis_max_connections=2,
+    broker_connection_retry_on_startup=True,
 )
