@@ -14,6 +14,7 @@ from api.agents_test import graph, StoryState
 from celery.result import AsyncResult
 from api.celery_app import celery_app
 from api.tasks import generate_story_task
+import redis
 
 app = FastAPI()
 app.add_middleware(
@@ -25,6 +26,9 @@ app.add_middleware(
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
+
+# Configuración de Redis para Health Check
+REDIS_URL = os.getenv("REDIS_URL")
 
 # Configuración de Supabase
 SUPABASE_URL = os.getenv("SUPABASE_URL")
@@ -330,6 +334,8 @@ async def generate_story_async(
     # Enqueue task
     logger.info(f"📤 Enqueuing task for user {user_id}, topic: {request.topic}")
     try:
+        # Log connection attempt
+        logger.info("Attempting to connect to Redis to enqueue task...")
         task = generate_story_task.delay(
             topic=request.topic,
             user_id=user_id,
@@ -339,8 +345,11 @@ async def generate_story_async(
         logger.info(f"✅ Task enqueued successfully. Task ID: {task.id}")
         return {"task_id": task.id, "status": "processing"}
     except Exception as e:
-        logger.error(f"❌ Error enqueuing task: {str(e)}")
-        raise HTTPException(status_code=503, detail="Service busy, please try again later.")
+        logger.error(f"❌ Error enqueuing task: {str(e)}", exc_info=True)
+        # Check if it is a connection error
+        if "max number of clients reached" in str(e):
+             logger.critical("REDIS CONNECTION LIMIT REACHED. Please upgrade Redis plan or reduce concurrency.")
+        raise HTTPException(status_code=503, detail=f"Service busy or Redis error: {str(e)}")
 
 @app.get("/tasks/{task_id}")
 async def get_task_status(task_id: str):
@@ -386,4 +395,17 @@ async def refill_plus_credits():
 
 @app.on_event("startup")
 async def startup_event():
+    # Redis Health Check
+    if REDIS_URL:
+        try:
+            logger.info(f"Checking Redis connection...")
+            r = redis.from_url(REDIS_URL)
+            r.ping()
+            logger.info("✅ Redis connection successful")
+            r.close()
+        except Exception as e:
+            logger.error(f"❌ Redis connection failed on startup: {e}")
+    else:
+        logger.warning("⚠️ REDIS_URL not set")
+
     asyncio.create_task(refill_plus_credits())

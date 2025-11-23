@@ -21,7 +21,7 @@ else:
 @celery_app.task(bind=True, name="generate_story_task")
 def generate_story_task(self, topic: str, user_id: str, jwt_token: str, model: str = "dall-e-3"):
     task_id = self.request.id
-    logger.info(f" [Task {task_id}] STARTED processing.")
+    logger.info(f" [Task {task_id}] RECEIVED by worker.")
     logger.info(f" [Task {task_id}] INPUT -> User: {user_id} | Topic: '{topic}' | Model: {model}")
     
     try:
