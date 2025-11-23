@@ -11,5 +11,11 @@ COPY . ./api/
 # Set PYTHONPATH to /app so python can find the 'api' package
 ENV PYTHONPATH=/app
 
-# Run celery worker
-CMD ["celery", "-A", "api.tasks", "worker", "--loglevel=info"]
+# Copiar el script de inicio
+COPY api/worker_start.sh /app/api/worker_start.sh
+
+# Dar permisos de ejecución (importante)
+RUN chmod +x /app/api/worker_start.sh
+
+# Usar el script como comando de inicio
+CMD ["/app/api/worker_start.sh"]
