@@ -1,21 +1,18 @@
 FROM python:3.11-slim
 WORKDIR /app
 
-# Copy requirements first
-COPY requirements.txt .
+# 1. Copiar requirements desde la carpeta api/
+COPY api/requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
-# Copy the current directory (.) into /app/api
-COPY . ./api/
+# 2. Copiar todo el contenido de la carpeta api/ local a /app/api/ en el contenedor
+COPY api/ ./api/
 
-# Set PYTHONPATH to /app so python can find the 'api' package
+# 3. Establecer PYTHONPATH para que Python encuentre el paquete 'api'
 ENV PYTHONPATH=/app
 
-# Copiar el script de inicio
-COPY api/worker_start.sh /app/api/worker_start.sh
-
-# Dar permisos de ejecución (importante)
+# 4. Dar permisos de ejecución al script (que ahora está en /app/api/worker_start.sh)
 RUN chmod +x /app/api/worker_start.sh
 
-# Usar el script como comando de inicio
+# 5. Ejecutar el script usando la ruta absoluta correcta
 CMD ["/app/api/worker_start.sh"]

@@ -15,8 +15,8 @@ services:
 
   worker:
     build:
-      context: ./api
-      dockerfile: Dockerfile.worker
+      context: .
+      dockerfile: api/Dockerfile.worker
     environment:
       - OPENAI_API_KEY=${OPENAI_API_KEY}
       - GROQ_API_KEY=${GROQ_API_KEY}
