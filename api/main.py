@@ -315,10 +315,12 @@ async def generate_story_async(
     
     # Verify user
     try:
-        user = supabase.auth.get_user(token)
-        user_id = user.user.id
+        user_id = verify_jwt(token)
     except Exception as e:
         raise HTTPException(status_code=401, detail=f"Invalid token: {str(e)}")
+
+    # Get authenticated client
+    supabase = get_supabase_client(token)
 
     # Check credits
     profile = supabase.table("profiles").select("credits").eq("id", user_id).single().execute()
@@ -333,7 +335,7 @@ async def generate_story_async(
         jwt_token=token,
         model=request.model
     )
-    logger.info(f"✅ Task enqueued successfully. Task ID: {task.id}")
+    logger.info(f" Task enqueued successfully. Task ID: {task.id}")
     
     return {"task_id": task.id, "status": "processing"}
 
