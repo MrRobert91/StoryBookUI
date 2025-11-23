@@ -25,7 +25,7 @@ logger = logging.getLogger(__name__)
 celery_app = Celery(
     "story_tasks",
     broker=REDIS_URL,
-    backend=None
+    backend=REDIS_URL
 )
 
 @after_setup_logger.connect
@@ -45,11 +45,13 @@ def at_start(sender, **kwargs):
 celery_app.conf.update(
     task_serializer="json",
     accept_content=["json"],
-    task_ignore_result=True,
     timezone="UTC",
     enable_utc=True,
     broker_pool_limit=1,
-    broker_connection_retry_on_startup=True,
     worker_concurrency=1,
+    result_serializer="json",
+    result_expires=3600,
+    result_backend_transport_options={"max_connections": 2},
+    broker_connection_retry_on_startup=True,
     broker_transport_options={"max_connections": 2},
 )
