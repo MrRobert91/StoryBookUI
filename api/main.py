@@ -329,15 +329,18 @@ async def generate_story_async(
 
     # Enqueue task
     logger.info(f"📤 Enqueuing task for user {user_id}, topic: {request.topic}")
-    task = generate_story_task.delay(
-        topic=request.topic,
-        user_id=user_id,
-        jwt_token=token,
-        model=request.model
-    )
-    logger.info(f" Task enqueued successfully. Task ID: {task.id}")
-    
-    return {"task_id": task.id, "status": "processing"}
+    try:
+        task = generate_story_task.delay(
+            topic=request.topic,
+            user_id=user_id,
+            jwt_token=token,
+            model=request.model
+        )
+        logger.info(f"✅ Task enqueued successfully. Task ID: {task.id}")
+        return {"task_id": task.id, "status": "processing"}
+    except Exception as e:
+        logger.error(f"❌ Error enqueuing task: {str(e)}")
+        raise HTTPException(status_code=503, detail="Service busy, please try again later.")
 
 @app.get("/tasks/{task_id}")
 async def get_task_status(task_id: str):
