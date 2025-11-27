@@ -103,7 +103,7 @@ export function useStoryGeneration(): UseStoryGenerationReturn {
 
       try {
         // Step 1: Send generation request
-        const initResponse = await fetch(`${fastApiUrl}/generate-story-async`, {
+        const initResponse = await fetch(`${fastApiUrl}/stories/generate-story-async`, {
           method: "POST",
           headers: {
             Accept: "application/json",
