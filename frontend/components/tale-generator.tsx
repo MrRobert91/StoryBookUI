@@ -73,7 +73,7 @@ export default function TaleGenerator() {
         throw new Error("API URL not configured for AI endpoint.")
       }
 
-      const API_URL = `${fastApiUrl}/generate-story-ai`
+      const API_URL = `${fastApiUrl}/stories/generate-story-ai`
       console.log("Making request to AI endpoint:", API_URL)
 
       const response = await fetch(API_URL, {
@@ -165,7 +165,7 @@ Something important was about to be revealed - something that would test their c
         throw new Error("API URL not configured for JWT endpoint.")
       }
 
-      const API_URL = `${fastApiUrl}/generate-story-ai-jwt`
+      const API_URL = `${fastApiUrl}/stories/generate-story-ai-jwt`
       console.log("Making request to AI JWT endpoint:", API_URL)
 
       const response = await fetch(API_URL, {
@@ -272,7 +272,7 @@ Ancient trees whispered secrets in languages long forgotten, and magical creatur
         throw new Error("API URL not configured for image JWT endpoint.")
       }
 
-      const API_URL = `${fastApiUrl}/generate-story-ai-images-jwt`
+      const API_URL = `${fastApiUrl}/stories/generate-story-ai-images-jwt`
       console.log("[v0] Making request to AI Images JWT endpoint:", API_URL)
       console.log("[v0] Prompt:", prompt.trim())
       console.log("[v0] Auth token present:", !!session.access_token)
