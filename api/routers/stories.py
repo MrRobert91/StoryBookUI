@@ -109,7 +109,7 @@ async def generate_story_ai_images_jwt(req: TaleAIRequest, user: UserProfile = D
         result = graph.invoke({
             "messages": [{"role": "user", "content": req.prompt}],
             "user_id": user.id,
-            "jwt_token": user.client.auth.get_session().access_token  # Pasamos el token del cliente
+            "jwt_token": user.token  # CORRECCIÓN: Usar el token del objeto UserProfile
         })
 
         final_output = result.get("final_output")
@@ -134,7 +134,7 @@ async def generate_story_async(request: StoryRequest, user: UserProfile = Depend
         task = generate_story_task.delay(
             topic=request.topic,
             user_id=str(user.id),
-            jwt_token=user.client.auth.get_session().access_token,
+            jwt_token=user.token,  # CORRECCIÓN: Usar el token del objeto UserProfile
             model=request.model
         )
         return {"task_id": task.id, "status": "processing"}

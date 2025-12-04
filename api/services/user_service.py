@@ -10,11 +10,12 @@ logger = logging.getLogger(__name__)
 
 class UserProfile:
     """Modelo para almacenar los datos relevantes del perfil del usuario."""
-    def __init__(self, user_id: str, credits: int, plan: str, supabase_client: Client):
+    def __init__(self, user_id: str, credits: int, plan: str, supabase_client: Client, token: str):
         self.id = user_id
         self.credits = credits
         self.plan = plan
         self.client = supabase_client
+        self.token = token
 
 def _log_token_details(token: str):
     """Función auxiliar para decodificar y registrar detalles de un JWT sin validarlo."""
@@ -54,10 +55,10 @@ def verify_jwt_and_get_user(token: str) -> UserProfile:
 
     # 2. Verificar el token obteniendo los datos del usuario.
     try:
-        user_response = supabase.auth.get_user()
+        # CORRECCIÓN: Pasar el token explícitamente a la función get_user.
+        user_response = supabase.auth.get_user(token)
         if not user_response or not user_response.user:
             logger.warning("Supabase did not return a user for the token.")
-            # Añadimos el logging mejorado aquí para obtener más detalles del token rechazado
             _log_token_details(token)
             raise HTTPException(status_code=401, detail="Invalid or expired token.")
         user_id = user_response.user.id
@@ -84,11 +85,13 @@ def verify_jwt_and_get_user(token: str) -> UserProfile:
              logger.warning("No profile found for user_id: %s", user_id)
              raise HTTPException(status_code=404, detail="User profile not found.")
 
+        # CORRECCIÓN: Pasar el token al crear el objeto UserProfile.
         return UserProfile(
             user_id=user_id,
             credits=profile_data.get("credits", 0),
             plan=profile_data.get("plan", "free"),
-            supabase_client=supabase
+            supabase_client=supabase,
+            token=token
         )
     except Exception as exc:
         logger.exception("Failed to fetch user profile from database.")
