@@ -3,7 +3,7 @@ from celery.result import AsyncResult
 
 router = APIRouter()
 
-@router.get("/tasks/{task_id}")
+@router.get("/{task_id}")
 async def get_task_status(task_id: str):
     """
     Devuelve el estado y el resultado de una tarea de Celery.
