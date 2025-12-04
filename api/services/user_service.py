@@ -1,6 +1,8 @@
 from fastapi import HTTPException
 from supabase import Client
 import logging
+import jwt
+from datetime import datetime, timezone
 
 from api.services.supabase_client import get_supabase_user_client, service_supabase_client
 
@@ -14,6 +16,32 @@ class UserProfile:
         self.plan = plan
         self.client = supabase_client
 
+def _log_token_details(token: str):
+    """Función auxiliar para decodificar y registrar detalles de un JWT sin validarlo."""
+    try:
+        # Decodificar el token sin verificar la firma para inspeccionar los claims
+        decoded_token = jwt.decode(token, options={"verify_signature": False})
+
+        user_id = decoded_token.get("sub")
+        exp_timestamp = decoded_token.get("exp")
+
+        exp_datetime = "N/A"
+        is_expired = "N/A"
+
+        if exp_timestamp:
+            exp_datetime = datetime.fromtimestamp(exp_timestamp, tz=timezone.utc).isoformat()
+            is_expired = datetime.now(timezone.utc).timestamp() > exp_timestamp
+
+        logger.warning(
+            "Token details: sub=%s, exp=%s, is_expired=%s",
+            user_id, exp_datetime, is_expired
+        )
+    except jwt.DecodeError:
+        logger.warning("Could not decode the provided JWT.")
+    except Exception:
+        logger.exception("An unexpected error occurred while decoding the token.")
+
+
 def verify_jwt_and_get_user(token: str) -> UserProfile:
     """
     Verifica el JWT de un usuario, obtiene su perfil y devuelve un objeto UserProfile.
@@ -22,7 +50,6 @@ def verify_jwt_and_get_user(token: str) -> UserProfile:
     logger.info("Verifying JWT and fetching user profile.")
 
     # 1. Obtener un cliente de Supabase autenticado con el token del usuario.
-    # Este cliente también se usará para las operaciones de RLS.
     supabase = get_supabase_user_client(token)
 
     # 2. Verificar el token obteniendo los datos del usuario.
@@ -30,11 +57,14 @@ def verify_jwt_and_get_user(token: str) -> UserProfile:
         user_response = supabase.auth.get_user()
         if not user_response or not user_response.user:
             logger.warning("Supabase did not return a user for the token.")
+            # Añadimos el logging mejorado aquí para obtener más detalles del token rechazado
+            _log_token_details(token)
             raise HTTPException(status_code=401, detail="Invalid or expired token.")
         user_id = user_response.user.id
         logger.info("JWT is valid for user_id: %s", user_id)
     except Exception as exc:
         logger.exception("Error verifying JWT with Supabase.")
+        _log_token_details(token)
         raise HTTPException(status_code=401, detail="Invalid or expired token.") from exc
 
     # 3. Obtener el perfil del usuario para verificar créditos y plan.
