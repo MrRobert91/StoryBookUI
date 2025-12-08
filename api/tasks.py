@@ -19,7 +19,7 @@ else:
     logger.warning("⚠️ SUPABASE CREDENTIALS NOT FOUND. Database operations will fail.")
 
 @celery_app.task(bind=True, name="generate_story_task")
-def generate_story_task(self, topic: str, user_id: str, jwt_token: str, model: str = "dall-e-3"):
+def generate_story_task(self, topic: str, user_id: str, jwt_token: str, model: str | None = None):
     task_id = self.request.id
     logger.info(f" [Task {task_id}] RECEIVED by worker.")
     logger.info(f" [Task {task_id}] INPUT -> User: {user_id} | Topic: '{topic}' | Model: {model}")
