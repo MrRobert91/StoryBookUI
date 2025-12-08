@@ -194,6 +194,26 @@ export default function AccountContent({ user }: AccountContentProps) {
     }
   }
 
+  const handleDeleteStory = async (storyId: string) => {
+    try {
+      const { error } = await storyOperations.deleteStory(storyId)
+
+      if (error) {
+        console.error("Error deleting story:", error)
+        alert("Error deleting story. Please try again.")
+        return false
+      } else {
+        // Remove the story from the local state
+        setStories((prevStories) => prevStories.filter((s) => s.id !== storyId))
+        return true
+      }
+    } catch (error) {
+      console.error("Error deleting story:", error)
+      alert("Error deleting story. Please try again.")
+      return false
+    }
+  }
+
   const truncateContent = (content: string) => {
     return content.substring(0, 100) + "..."
   }
@@ -238,13 +258,12 @@ export default function AccountContent({ user }: AccountContentProps) {
                           type="text"
                           value={newUsername}
                           onChange={(e) => setNewUsername(e.target.value.toLowerCase())}
-                          className={`w-full px-3 py-2 pr-10 bg-white border rounded-md text-gray-900 focus:outline-none focus:ring-2 focus:border-transparent ${
-                            usernameStatus.error
-                              ? "border-red-300 focus:ring-red-500"
-                              : usernameStatus.available === true
-                                ? "border-green-300 focus:ring-green-500"
-                                : "border-gray-300 focus:ring-purple-500"
-                          }`}
+                          className={`w-full px-3 py-2 pr-10 bg-white border rounded-md text-gray-900 focus:outline-none focus:ring-2 focus:border-transparent ${usernameStatus.error
+                            ? "border-red-300 focus:ring-red-500"
+                            : usernameStatus.available === true
+                              ? "border-green-300 focus:ring-green-500"
+                              : "border-gray-300 focus:ring-purple-500"
+                            }`}
                         />
                         <div className="absolute inset-y-0 right-0 flex items-center pr-3">
                           {usernameStatus.checking ? (
@@ -354,11 +373,10 @@ export default function AccountContent({ user }: AccountContentProps) {
                       {/* Visibility toggle button */}
                       <button
                         onClick={() => toggleStoryVisibility(story)}
-                        className={`px-2 py-1 text-xs rounded transition-colors ${
-                          story.visibility === "public"
-                            ? "bg-green-100 text-green-800 hover:bg-green-200"
-                            : "bg-gray-100 text-gray-800 hover:bg-gray-200"
-                        }`}
+                        className={`px-2 py-1 text-xs rounded transition-colors ${story.visibility === "public"
+                          ? "bg-green-100 text-green-800 hover:bg-green-200"
+                          : "bg-gray-100 text-gray-800 hover:bg-gray-200"
+                          }`}
                         title={story.visibility === "public" ? "Make Private" : "Make Public"}
                       >
                         {story.visibility === "public" ? "Public" : "Private"}
@@ -388,7 +406,18 @@ export default function AccountContent({ user }: AccountContentProps) {
       </div>
 
       {/* Modals */}
-      {selectedStory && <StoryModal story={selectedStory} onClose={() => setSelectedStory(null)} />}
+      {selectedStory && (
+        <StoryModal
+          story={selectedStory}
+          onClose={() => setSelectedStory(null)}
+          onDelete={async (id) => {
+            const success = await handleDeleteStory(id)
+            if (success) {
+              setSelectedStory(null)
+            }
+          }}
+        />
+      )}
       {showStripeModal && <StripeModal isOpen={showStripeModal} onClose={() => setShowStripeModal(false)} />}
     </div>
   )

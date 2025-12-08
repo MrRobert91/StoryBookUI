@@ -2,16 +2,17 @@
 
 import type React from "react"
 
-import { X } from "lucide-react"
+import { X, Trash2 } from "lucide-react"
 import type { Story } from "@/lib/supabase/stories"
 import MarkdownRenderer from "./markdown-renderer"
 
 interface StoryModalProps {
   story: Story
   onClose: () => void
+  onDelete?: (id: string) => Promise<void>
 }
 
-export default function StoryModal({ story, onClose }: StoryModalProps) {
+export default function StoryModal({ story, onClose, onDelete }: StoryModalProps) {
   const formatDate = (dateString: string) => {
     return new Date(dateString).toLocaleDateString("en-US", {
       year: "numeric",
@@ -66,6 +67,19 @@ export default function StoryModal({ story, onClose }: StoryModalProps) {
           >
             Close
           </button>
+          {onDelete && (
+            <button
+              onClick={() => {
+                if (window.confirm("Are you sure you want to delete this story? This action cannot be undone.")) {
+                  onDelete(story.id)
+                }
+              }}
+              className="px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700 transition-colors flex items-center gap-2"
+            >
+              <Trash2 className="h-4 w-4" />
+              Delete Story
+            </button>
+          )}
           <button
             onClick={() => {
               navigator.clipboard.writeText(story.content)
