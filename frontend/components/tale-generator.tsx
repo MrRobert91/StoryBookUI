@@ -435,7 +435,7 @@ Ancient trees whispered secrets in languages long forgotten, and magical creatur
         throw new Error("Authentication required. Please log in again.")
       }
 
-      await generateStory(prompt.trim(), "dall-e-3", session.access_token)
+      await generateStory(prompt.trim(), session.access_token)
     } catch (error) {
       console.error("[v0] Error initiating async story generation:", error)
       if (error instanceof Error) {
@@ -470,13 +470,12 @@ Ancient trees whispered secrets in languages long forgotten, and magical creatur
 
             {(isSaving || saveSuccess || saveError) && (
               <div
-                className={`text-sm p-3 rounded-lg flex items-center gap-2 ${
-                  saveSuccess
+                className={`text-sm p-3 rounded-lg flex items-center gap-2 ${saveSuccess
                     ? "bg-green-50 text-green-700 border border-green-200"
                     : saveError
                       ? "bg-red-50 text-red-700 border border-red-200"
                       : "bg-blue-50 text-blue-700 border border-blue-200"
-                }`}
+                  }`}
               >
                 {isSaving && <Loader2 className="h-4 w-4 animate-spin" />}
                 {saveSuccess && <Check className="h-4 w-4" />}
@@ -509,11 +508,10 @@ Ancient trees whispered secrets in languages long forgotten, and magical creatur
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <button
                 onClick={generateAIStory}
-                className={`py-4 px-6 text-lg font-medium rounded-lg transition-colors flex items-center justify-center ${
-                  !prompt.trim() || isAnyGenerating || authLoading || !user
+                className={`py-4 px-6 text-lg font-medium rounded-lg transition-colors flex items-center justify-center ${!prompt.trim() || isAnyGenerating || authLoading || !user
                     ? "bg-gray-400 cursor-not-allowed text-gray-600"
                     : "bg-pink-600 hover:bg-pink-700 text-white"
-                }`}
+                  }`}
                 disabled={!prompt.trim() || isAnyGenerating || authLoading || !user}
               >
                 {isGeneratingAI ? (
@@ -531,11 +529,10 @@ Ancient trees whispered secrets in languages long forgotten, and magical creatur
 
               <button
                 onClick={generateStoryWithAIJWT}
-                className={`py-4 px-6 text-lg font-medium rounded-lg transition-colors flex items-center justify-center ${
-                  !prompt.trim() || isAnyGenerating || authLoading || !user
+                className={`py-4 px-6 text-lg font-medium rounded-lg transition-colors flex items-center justify-center ${!prompt.trim() || isAnyGenerating || authLoading || !user
                     ? "bg-gray-400 cursor-not-allowed text-gray-600"
                     : "bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 text-white"
-                }`}
+                  }`}
                 disabled={!prompt.trim() || isAnyGenerating || authLoading || !user}
               >
                 {isGeneratingAIJWT ? (
@@ -553,11 +550,10 @@ Ancient trees whispered secrets in languages long forgotten, and magical creatur
 
               <button
                 onClick={generateStoryWithImagesAIJWT}
-                className={`py-4 px-6 text-lg font-medium rounded-lg transition-colors flex items-center justify-center sm:col-span-2 ${
-                  !prompt.trim() || isAnyGenerating || authLoading || !user
+                className={`py-4 px-6 text-lg font-medium rounded-lg transition-colors flex items-center justify-center sm:col-span-2 ${!prompt.trim() || isAnyGenerating || authLoading || !user
                     ? "bg-gray-400 cursor-not-allowed text-gray-600"
                     : "bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white"
-                }`}
+                  }`}
                 disabled={!prompt.trim() || isAnyGenerating || authLoading || !user}
               >
                 {isGeneratingAIJWTImages ? (

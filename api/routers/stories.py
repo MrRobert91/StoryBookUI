@@ -25,7 +25,7 @@ class TaleAIRequest(BaseModel):
 
 class StoryRequest(BaseModel):
     topic: str
-    model: str = "dall-e-3"
+    # model: str = "dall-e-3"  # Configured in backend
 
 # --- Helper Functions ---
 def extract_json(text: str) -> dict | None:
@@ -131,11 +131,14 @@ async def generate_story_async(request: StoryRequest, user: UserProfile = Depend
     logger.info("Enqueuing async story generation task for user %s", user.id)
 
     try:
+        # Configuration for image model
+        IMAGE_MODEL = "dall-e-3"
+        
         task = generate_story_task.delay(
             topic=request.topic,
             user_id=str(user.id),
             jwt_token=user.token,
-            model=request.model
+            model=IMAGE_MODEL
         )
         return {"task_id": task.id, "status": "processing"}
     except Exception as e:
