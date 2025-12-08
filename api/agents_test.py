@@ -251,7 +251,7 @@ def generate_image(prompt: str, model: str = None, image_type: str = "image") ->
             if 'b64_json' in first_item_dict and first_item_dict['b64_json']:
                 first_item_dict['b64_json'] = first_item_dict['b64_json'][:100] + "... (truncated)"
             
-            logger.info(f" [DEBUG] Response Data[0] keys/content: {first_item_dict if response.data else 'No data'}")
+            logger.info(f" [DEBUG] Raw Image Response for: {model_name} - Response Data[0] keys/content: {first_item_dict if response.data else 'No data'}")
         except:
             pass
 
