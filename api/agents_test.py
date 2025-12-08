@@ -234,7 +234,7 @@ def generate_image(prompt: str, model: str = None, image_type: str = "image") ->
         
         if is_base64_model:
             params["quality"] = "low"
-            params["response_format"] = "b64_json"
+            # params["response_format"] = "b64_json"  <-- Causing 400 error on gpt-image-1-mini
             logger.debug(f"Configured for base64 output ({model_name})")
         
         # estilo vívido para DALL·E 3 (más ilustrativo que natural)
@@ -244,6 +244,13 @@ def generate_image(prompt: str, model: str = None, image_type: str = "image") ->
         # Generar imagen con OpenAI
         response = client.images.generate(**params)
         
+        # LOGGING SOLICITADO: Visualizar formato de respuesta
+        logger.info(f" [DEBUG] Raw Image Response for {model_name}: {response}")
+        try:
+            logger.info(f" [DEBUG] Response Data[0] keys: {response.data[0].__dict__ if response.data else 'No data'}")
+        except:
+            pass
+
         # Determinar tipo de imagen para nombrado
         if image_type == "cover":
             storage_type = "cover"
@@ -253,10 +260,20 @@ def generate_image(prompt: str, model: str = None, image_type: str = "image") ->
         
         # Procesar respuesta según tipo
         if is_base64_model:
-            # Obtener base64 y decodificar a bytes
-            b64_data = response.data[0].b64_json
+            # Intentar obtener base64
+            # Nota: Si el modelo no soporta response_format='b64_json', es posible que no devuelva b64_json.
+            # Verificamos si existe en el objeto respuesta
+            first_item = response.data[0]
+            b64_data = getattr(first_item, 'b64_json', None)
+            
             if not b64_data:
-                logger.error("No b64_json in response")
+                logger.warning(f"No b64_json in response for {model_name}. Checks if url exists.")
+                # Fallback: intentar usar URL si está disponible
+                if hasattr(first_item, 'url') and first_item.url:
+                     logger.info("✓ Found URL instead of b64_json, switching method.")
+                     return upload_to_supabase_storage(first_item.url, storage_type)
+                
+                logger.error("No image data (b64 or url) found in response.")
                 return ""
             
             logger.info("✓ OpenAI generated image (base64)")
