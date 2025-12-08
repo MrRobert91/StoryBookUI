@@ -245,7 +245,7 @@ def generate_image(prompt: str, model: str = None, image_type: str = "image") ->
         response = client.images.generate(**params)
         
         # LOGGING SOLICITADO: Visualizar formato de respuesta (con B64 truncado)
-        logger.info(f" [DEBUG] Raw Image Response for {model_name}: {response}")
+        #logger.info(f" [DEBUG] Raw Image Response for {model_name}: {response}")
         try:
             first_item_dict = response.data[0].__dict__.copy() if response.data else {}
             if 'b64_json' in first_item_dict and first_item_dict['b64_json']:
