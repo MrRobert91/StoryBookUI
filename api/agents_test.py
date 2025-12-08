@@ -244,10 +244,14 @@ def generate_image(prompt: str, model: str = None, image_type: str = "image") ->
         # Generar imagen con OpenAI
         response = client.images.generate(**params)
         
-        # LOGGING SOLICITADO: Visualizar formato de respuesta
+        # LOGGING SOLICITADO: Visualizar formato de respuesta (con B64 truncado)
         logger.info(f" [DEBUG] Raw Image Response for {model_name}: {response}")
         try:
-            logger.info(f" [DEBUG] Response Data[0] keys: {response.data[0].__dict__ if response.data else 'No data'}")
+            first_item_dict = response.data[0].__dict__.copy() if response.data else {}
+            if 'b64_json' in first_item_dict and first_item_dict['b64_json']:
+                first_item_dict['b64_json'] = first_item_dict['b64_json'][:100] + "... (truncated)"
+            
+            logger.info(f" [DEBUG] Response Data[0] keys/content: {first_item_dict if response.data else 'No data'}")
         except:
             pass
 
