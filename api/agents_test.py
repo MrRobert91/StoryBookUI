@@ -1,6 +1,7 @@
 import json
 import re
 import logging
+import base64
 from typing import List
 from pydantic import BaseModel, Field
 from datetime import datetime
@@ -85,33 +86,16 @@ def get_s3_client():
         config=Config(signature_version='s3v4')
     )
 
-def upload_to_supabase_storage(image_url: str, image_type: str) -> str:
+def upload_image_bytes_to_supabase(image_data: bytes, image_type: str) -> str:
     """
-    Download image from URL and upload to Supabase Storage using user's JWT.
-    
-    Args:
-        image_url: URL from OpenAI API
-        image_type: 'cover' or 'chapter_N'
-    
-    Returns:
-        Public URL of the uploaded image in Supabase Storage, or original URL if upload fails
+    Upload raw image bytes to Supabase Storage.
+    Returns the public URL or empty string if failed.
     """
-    if not image_url:
-        logger.warning("Empty image_url provided")
-        return ""
-    
     if not _current_user_id or not _current_jwt_token:
         logger.error("User context not set. Cannot upload to Supabase.")
-        return image_url
+        return ""
     
     try:
-        # Download image from OpenAI
-        logger.info(f"Downloading image from OpenAI: {image_url[:80]}...")
-        response = requests.get(image_url, timeout=30)
-        response.raise_for_status()
-        image_data = response.content
-        logger.info(f"Image downloaded, size: {len(image_data)} bytes")
-        
         # Generate filename: user_id/story_id/image_type_uuid.png
         file_extension = "png"
         unique_id = str(uuid.uuid4())[:8]
@@ -136,6 +120,37 @@ def upload_to_supabase_storage(image_url: str, image_type: str) -> str:
         
     except Exception as e:
         logger.exception(f"Error uploading to Supabase Storage: {e}")
+        return ""
+
+def upload_to_supabase_storage(image_url: str, image_type: str) -> str:
+    """
+    Download image from URL and upload to Supabase Storage using user's JWT.
+    
+    Args:
+        image_url: URL from OpenAI API
+        image_type: 'cover' or 'chapter_N'
+    
+    Returns:
+        Public URL of the uploaded image in Supabase Storage, or original URL if upload fails
+    """
+    if not image_url:
+        logger.warning("Empty image_url provided")
+        return ""
+    
+    try:
+        # Download image from OpenAI
+        logger.info(f"Downloading image from OpenAI: {image_url[:80]}...")
+        response = requests.get(image_url, timeout=30)
+        response.raise_for_status()
+        image_data = response.content
+        logger.info(f"Image downloaded, size: {len(image_data)} bytes")
+        
+        # Use simple upload function
+        public_url = upload_image_bytes_to_supabase(image_data, image_type)
+        return public_url if public_url else image_url
+        
+    except Exception as e:
+        logger.exception(f"Error downloading/uploading to Supabase Storage: {e}")
         # Fallback to original URL
         return image_url
 
@@ -200,6 +215,7 @@ def generate_image(prompt: str, model: str = None, image_type: str = "image") ->
     """
     Generate image using OpenAI API and upload to Supabase Storage.
     Returns the Supabase Storage URL instead of the temporary OpenAI URL.
+    Handles both URL-based models (DALL-E 3) and base64 models (GPT-Image-1-Mini).
     """
     model_name = IMAGE_MODELS.get((model or SELECTED_IMAGE_MODEL).lower(), SELECTED_IMAGE_MODEL)
     logger.info(f"Generating image with {model_name}, prompt length: {len(prompt)}")
@@ -213,10 +229,13 @@ def generate_image(prompt: str, model: str = None, image_type: str = "image") ->
             "n": 1
         }
         
-        # Añadir 'quality' solo para gpt-image-1 y gpt-image-1-mini
-        if model_name in ["gpt-image-1", "gpt-image-1-mini"]:
+        # Configuración específica para modelos base64 (gpt-image-1*)
+        is_base64_model = model_name in ["gpt-image-1", "gpt-image-1-mini"]
+        
+        if is_base64_model:
             params["quality"] = "low"
-            logger.debug(f"Added quality='low' for {model_name}")
+            params["response_format"] = "b64_json"
+            logger.debug(f"Configured for base64 output ({model_name})")
         
         # estilo vívido para DALL·E 3 (más ilustrativo que natural)
         if model_name == "dall-e-3":
@@ -224,8 +243,6 @@ def generate_image(prompt: str, model: str = None, image_type: str = "image") ->
         
         # Generar imagen con OpenAI
         response = client.images.generate(**params)
-        openai_url = response.data[0].url
-        logger.info(f"✓ OpenAI generated image: {openai_url[:80]}...")
         
         # Determinar tipo de imagen para nombrado
         if image_type == "cover":
@@ -234,11 +251,27 @@ def generate_image(prompt: str, model: str = None, image_type: str = "image") ->
             _image_counter["chapter"] += 1
             storage_type = f"chapter_{_image_counter['chapter']}"
         
-        # Subir a Supabase Storage y obtener URL permanente
-        supabase_url = upload_to_supabase_storage(openai_url, storage_type)
-        
-        return supabase_url
-        
+        # Procesar respuesta según tipo
+        if is_base64_model:
+            # Obtener base64 y decodificar a bytes
+            b64_data = response.data[0].b64_json
+            if not b64_data:
+                logger.error("No b64_json in response")
+                return ""
+            
+            logger.info("✓ OpenAI generated image (base64)")
+            image_data = base64.b64decode(b64_data)
+            
+            # Subir bytes directamente a Supabase
+            return upload_image_bytes_to_supabase(image_data, storage_type)
+        else:
+            # Flujo estándar por URL (DALL-E 3)
+            openai_url = response.data[0].url
+            logger.info(f"✓ OpenAI generated image: {openai_url[:80]}...")
+            
+            # Descargar y subir a Supabase
+            return upload_to_supabase_storage(openai_url, storage_type)
+            
     except Exception as e:
         logger.error(f"Error generating image: {e}")
         return ""
