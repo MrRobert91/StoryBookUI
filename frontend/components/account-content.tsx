@@ -4,10 +4,10 @@ import { useState, useEffect } from "react"
 import type { User } from "@supabase/supabase-js"
 import { supabase } from "@/lib/supabase/client"
 import { profileOperations, type UserProfile } from "@/lib/supabase/profile-operations"
-import { storyOperations, type Story } from "@/lib/supabase/stories"
+import { storyOperations, type Story, type PaginatedStoriesResult } from "@/lib/supabase/stories"
 import StoryModal from "./story-modal"
 import StripeModal from "./stripe-modal"
-import { Loader2, Edit2, Check, X, Globe, Lock } from "lucide-react"
+import { Loader2, Edit2, Check, X, Globe, Lock, ChevronLeft, ChevronRight } from "lucide-react"
 import { getStoryPreview } from "./story-preview"
 
 interface AccountContentProps {
@@ -16,13 +16,15 @@ interface AccountContentProps {
 
 export default function AccountContent({ user }: AccountContentProps) {
   const [profile, setProfile] = useState<UserProfile | null>(null)
-  const [stories, setStories] = useState<Story[]>([])
+  const [storiesData, setStoriesData] = useState<PaginatedStoriesResult | null>(null)
   const [loading, setLoading] = useState(true)
   const [storiesLoading, setStoriesLoading] = useState(true)
   const [selectedStory, setSelectedStory] = useState<Story | null>(null)
   const [showStripeModal, setShowStripeModal] = useState(false)
   const [editingUsername, setEditingUsername] = useState(false)
   const [newUsername, setNewUsername] = useState("")
+  const [currentPage, setCurrentPage] = useState(1)
+  const [itemsPerPage, setItemsPerPage] = useState(12)
   const [usernameStatus, setUsernameStatus] = useState<{
     checking: boolean
     available: boolean | null
@@ -40,9 +42,14 @@ export default function AccountContent({ user }: AccountContentProps) {
   useEffect(() => {
     if (user) {
       loadProfile()
-      loadStories()
     }
   }, [user])
+
+  useEffect(() => {
+    if (user) {
+      loadStories(currentPage, itemsPerPage)
+    }
+  }, [user, currentPage, itemsPerPage])
 
   // Username availability check
   useEffect(() => {
@@ -116,21 +123,32 @@ export default function AccountContent({ user }: AccountContentProps) {
     }
   }
 
-  const loadStories = async () => {
+  const loadStories = async (page: number, limit: number) => {
     try {
-      console.log("Loading stories for user ID:", user.id)
-      const { data, error } = await storyOperations.getUserStories(user.id) // Pass user.id instead of user object
+      setStoriesLoading(true)
+      console.log("Loading stories for user ID:", user.id, "page:", page)
+      const { data, error } = await storyOperations.getUserStories(user.id, page, limit)
       if (error) {
         console.error("Error loading stories:", error)
       } else {
-        console.log("Stories loaded successfully:", data?.length || 0)
-        setStories(data || [])
+        console.log("Stories loaded successfully:", data?.stories.length || 0)
+        setStoriesData(data)
       }
     } catch (error) {
       console.error("Error loading stories:", error)
     } finally {
       setStoriesLoading(false)
     }
+  }
+
+  const handlePageChange = (newPage: number) => {
+    setCurrentPage(newPage)
+    window.scrollTo({ top: 0, behavior: "smooth" })
+  }
+
+  const handleItemsPerPageChange = (newLimit: number) => {
+    setItemsPerPage(newLimit)
+    setCurrentPage(1) // Reset to first page when changing items per page
   }
 
   const handleUsernameEdit = () => {
@@ -184,9 +202,13 @@ export default function AccountContent({ user }: AccountContentProps) {
         alert("Error updating story visibility. Please try again.")
       } else {
         // Update the story in the local state
-        setStories((prevStories) =>
-          prevStories.map((s) => (s.id === story.id ? { ...s, visibility: newVisibility } : s)),
-        )
+        setStoriesData((prevData) => {
+          if (!prevData) return null
+          return {
+            ...prevData,
+            stories: prevData.stories.map((s) => (s.id === story.id ? { ...s, visibility: newVisibility } : s)),
+          }
+        })
       }
     } catch (error) {
       console.error("Error updating story visibility:", error)
@@ -203,8 +225,8 @@ export default function AccountContent({ user }: AccountContentProps) {
         alert("Error deleting story. Please try again.")
         return false
       } else {
-        // Remove the story from the local state
-        setStories((prevStories) => prevStories.filter((s) => s.id !== storyId))
+        // Reload stories to start fresh with pagination
+        loadStories(currentPage, itemsPerPage)
         return true
       }
     } catch (error) {
@@ -337,13 +359,33 @@ export default function AccountContent({ user }: AccountContentProps) {
 
         {/* Stories Section */}
         <div className="bg-white rounded-lg shadow-sm p-6">
-          <h2 className="text-xl font-bold text-gray-900 mb-6">My Stories</h2>
+          <div className="flex flex-col sm:flex-row items-center justify-between mb-6 gap-4">
+            <h2 className="text-xl font-bold text-gray-900">My Stories</h2>
+
+            {/* Items Per Page Control */}
+            {storiesData && storiesData.stories.length > 0 && (
+              <div className="flex items-center gap-2">
+                <span className="text-sm font-medium text-gray-700">Per page:</span>
+                <select
+                  value={itemsPerPage}
+                  onChange={(e) => handleItemsPerPageChange(Number(e.target.value))}
+                  className="px-2 py-1 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-purple-500"
+                >
+                  {[12, 24, 48].map((option) => (
+                    <option key={option} value={option}>
+                      {option}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            )}
+          </div>
 
           {storiesLoading ? (
             <div className="flex items-center justify-center py-8">
               <Loader2 className="h-6 w-6 animate-spin text-purple-600" />
             </div>
-          ) : stories.length === 0 ? (
+          ) : !storiesData || storiesData.stories.length === 0 ? (
             <div className="text-center py-8">
               <p className="text-gray-500">No stories yet. Create your first story!</p>
               <button
@@ -354,53 +396,119 @@ export default function AccountContent({ user }: AccountContentProps) {
               </button>
             </div>
           ) : (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-              {stories.map((story) => (
-                <div key={story.id} className="border border-gray-200 rounded-lg p-4 hover:shadow-md transition-shadow">
-                  <div className="flex items-start justify-between mb-2">
-                    <h3 className="font-medium text-gray-900 truncate flex-1">
-                      {story.title || story.prompt || "Untitled Story"}
-                    </h3>
-                    <div className="flex items-center space-x-2 ml-2">
-                      {/* Visibility indicator */}
-                      <div className="flex items-center">
-                        {story.visibility === "public" ? (
-                          <Globe className="h-4 w-4 text-green-600" title="Public" />
-                        ) : (
-                          <Lock className="h-4 w-4 text-gray-600" title="Private" />
-                        )}
+            <>
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                {storiesData.stories.map((story) => (
+                  <div key={story.id} className="border border-gray-200 rounded-lg p-4 hover:shadow-md transition-shadow">
+                    <div className="flex items-start justify-between mb-2">
+                      <h3 className="font-medium text-gray-900 truncate flex-1">
+                        {story.title || story.prompt || "Untitled Story"}
+                      </h3>
+                      <div className="flex items-center space-x-2 ml-2">
+                        {/* Visibility indicator */}
+                        <div className="flex items-center">
+                          {story.visibility === "public" ? (
+                            <Globe className="h-4 w-4 text-green-600" title="Public" />
+                          ) : (
+                            <Lock className="h-4 w-4 text-gray-600" title="Private" />
+                          )}
+                        </div>
+                        {/* Visibility toggle button */}
+                        <button
+                          onClick={() => toggleStoryVisibility(story)}
+                          className={`px-2 py-1 text-xs rounded transition-colors ${story.visibility === "public"
+                              ? "bg-green-100 text-green-800 hover:bg-green-200"
+                              : "bg-gray-100 text-gray-800 hover:bg-gray-200"
+                            }`}
+                          title={story.visibility === "public" ? "Make Private" : "Make Public"}
+                        >
+                          {story.visibility === "public" ? "Public" : "Private"}
+                        </button>
                       </div>
-                      {/* Visibility toggle button */}
+                    </div>
+                    {story.prompt && <p className="text-xs text-purple-600 mb-2 italic">"{story.prompt}"</p>}
+                    <p className="text-sm text-gray-600 mb-3 line-clamp-2">
+                      {typeof story.content === "string"
+                        ? truncateContent(getStoryPreview(story.content))
+                        : "Generated story"}
+                    </p>
+                    <div className="flex items-center justify-between">
+                      <span className="text-xs text-gray-500">{new Date(story.created_at).toLocaleDateString()}</span>
                       <button
-                        onClick={() => toggleStoryVisibility(story)}
-                        className={`px-2 py-1 text-xs rounded transition-colors ${story.visibility === "public"
-                          ? "bg-green-100 text-green-800 hover:bg-green-200"
-                          : "bg-gray-100 text-gray-800 hover:bg-gray-200"
-                          }`}
-                        title={story.visibility === "public" ? "Make Private" : "Make Public"}
+                        onClick={() => setSelectedStory(story)}
+                        className="text-purple-600 hover:text-purple-700 text-sm font-medium"
                       >
-                        {story.visibility === "public" ? "Public" : "Private"}
+                        Read Story
                       </button>
                     </div>
                   </div>
-                  {story.prompt && <p className="text-xs text-purple-600 mb-2 italic">"{story.prompt}"</p>}
-                  <p className="text-sm text-gray-600 mb-3 line-clamp-2">
-                    {typeof story.content === "string"
-                      ? truncateContent(getStoryPreview(story.content))
-                      : "Generated story"}
-                  </p>
-                  <div className="flex items-center justify-between">
-                    <span className="text-xs text-gray-500">{new Date(story.created_at).toLocaleDateString()}</span>
+                ))}
+              </div>
+
+              {/* Pagination Controls */}
+              {storiesData.totalPages > 1 && (
+                <div className="flex flex-col sm:flex-row items-center justify-between gap-4 mt-8 pt-4 border-t">
+                  <div className="text-sm text-gray-600">
+                    Page {storiesData.currentPage} of {storiesData.totalPages} ({storiesData.totalCount} stories)
+                  </div>
+
+                  <div className="flex items-center gap-2">
                     <button
-                      onClick={() => setSelectedStory(story)}
-                      className="text-purple-600 hover:text-purple-700 text-sm font-medium"
+                      onClick={() => handlePageChange(storiesData.currentPage - 1)}
+                      disabled={!storiesData.hasPreviousPage}
+                      className={`flex items-center gap-1 px-3 py-2 rounded-md text-sm transition-colors ${storiesData.hasPreviousPage
+                          ? "bg-white border border-gray-300 text-gray-700 hover:bg-gray-50"
+                          : "bg-gray-100 text-gray-400 cursor-not-allowed"
+                        }`}
                     >
-                      Read Story
+                      <ChevronLeft className="h-4 w-4" />
+                      Previous
+                    </button>
+
+                    <div className="hidden sm:flex items-center gap-1">
+                      {Array.from({ length: Math.min(5, storiesData.totalPages) }, (_, i) => {
+                        let pageNum = i + 1;
+                        if (storiesData.totalPages > 5) {
+                          if (storiesData.currentPage > 3) {
+                            pageNum = storiesData.currentPage - 2 + i;
+                          }
+                          if (pageNum > storiesData.totalPages) {
+                            pageNum = storiesData.totalPages - 4 + i;
+                          }
+                        }
+                        if (pageNum > 0 && pageNum <= storiesData.totalPages) {
+                          return pageNum;
+                        }
+                        return null;
+                      }).filter(Boolean).map((pageNum) => (
+                        <button
+                          key={pageNum}
+                          onClick={() => handlePageChange(pageNum as number)}
+                          className={`px-3 py-2 rounded-md text-sm transition-colors ${pageNum === storiesData.currentPage
+                              ? "bg-purple-600 text-white"
+                              : "bg-white border border-gray-300 text-gray-700 hover:bg-gray-50"
+                            }`}
+                        >
+                          {pageNum}
+                        </button>
+                      ))}
+                    </div>
+
+                    <button
+                      onClick={() => handlePageChange(storiesData.currentPage + 1)}
+                      disabled={!storiesData.hasNextPage}
+                      className={`flex items-center gap-1 px-3 py-2 rounded-md text-sm transition-colors ${storiesData.hasNextPage
+                          ? "bg-white border border-gray-300 text-gray-700 hover:bg-gray-50"
+                          : "bg-gray-100 text-gray-400 cursor-not-allowed"
+                        }`}
+                    >
+                      Next
+                      <ChevronRight className="h-4 w-4" />
                     </button>
                   </div>
                 </div>
-              ))}
-            </div>
+              )}
+            </>
           )}
         </div>
       </div>

@@ -75,8 +75,12 @@ export const storyOperations = {
     }
   },
 
-  // Get all stories for current user
-  async getUserStories(userId: string): Promise<{ data: Story[] | null; error: any }> {
+  // Get all stories for current user with pagination
+  async getUserStories(
+    userId: string,
+    page = 1,
+    limit = 12,
+  ): Promise<{ data: PaginatedStoriesResult | null; error: any }> {
     if (!supabase) {
       return { data: null, error: new Error("Supabase not configured") }
     }
@@ -85,13 +89,45 @@ export const storyOperations = {
     }
 
     try {
+      const offset = (page - 1) * limit
+
+      // Get total count of user stories
+      const { count, error: countError } = await supabase
+        .from("stories")
+        .select("*", { count: "exact", head: true })
+        .eq("user_id", userId)
+
+      if (countError) {
+        console.error("Error getting count:", countError)
+        throw countError
+      }
+
+      // Get paginated user stories
       const { data, error } = await supabase
         .from("stories")
         .select("*")
-        .eq("user_id", userId) // Usar el userId pasado
+        .eq("user_id", userId)
         .order("created_at", { ascending: false })
+        .range(offset, offset + limit - 1)
 
-      return { data, error }
+      if (error) {
+        console.error("Error fetching stories:", error)
+        throw error
+      }
+
+      const totalCount = count || 0
+      const totalPages = Math.ceil(totalCount / limit)
+
+      const result: PaginatedStoriesResult = {
+        stories: data || [],
+        totalCount,
+        totalPages,
+        currentPage: page,
+        hasNextPage: page < totalPages,
+        hasPreviousPage: page > 1,
+      }
+
+      return { data: result, error: null }
     } catch (error) {
       console.error("Error fetching stories:", error)
       return { data: null, error }
