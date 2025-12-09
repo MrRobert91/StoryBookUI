@@ -417,8 +417,8 @@ export default function AccountContent({ user }: AccountContentProps) {
                         <button
                           onClick={() => toggleStoryVisibility(story)}
                           className={`px-2 py-1 text-xs rounded transition-colors ${story.visibility === "public"
-                              ? "bg-green-100 text-green-800 hover:bg-green-200"
-                              : "bg-gray-100 text-gray-800 hover:bg-gray-200"
+                            ? "bg-green-100 text-green-800 hover:bg-green-200"
+                            : "bg-gray-100 text-gray-800 hover:bg-gray-200"
                             }`}
                           title={story.visibility === "public" ? "Make Private" : "Make Public"}
                         >
@@ -457,8 +457,8 @@ export default function AccountContent({ user }: AccountContentProps) {
                       onClick={() => handlePageChange(storiesData.currentPage - 1)}
                       disabled={!storiesData.hasPreviousPage}
                       className={`flex items-center gap-1 px-3 py-2 rounded-md text-sm transition-colors ${storiesData.hasPreviousPage
-                          ? "bg-white border border-gray-300 text-gray-700 hover:bg-gray-50"
-                          : "bg-gray-100 text-gray-400 cursor-not-allowed"
+                        ? "bg-white border border-gray-300 text-gray-700 hover:bg-gray-50"
+                        : "bg-gray-100 text-gray-400 cursor-not-allowed"
                         }`}
                     >
                       <ChevronLeft className="h-4 w-4" />
@@ -466,27 +466,30 @@ export default function AccountContent({ user }: AccountContentProps) {
                     </button>
 
                     <div className="hidden sm:flex items-center gap-1">
-                      {Array.from({ length: Math.min(5, storiesData.totalPages) }, (_, i) => {
-                        let pageNum = i + 1;
-                        if (storiesData.totalPages > 5) {
-                          if (storiesData.currentPage > 3) {
-                            pageNum = storiesData.currentPage - 2 + i;
-                          }
-                          if (pageNum > storiesData.totalPages) {
-                            pageNum = storiesData.totalPages - 4 + i;
-                          }
+                      {(() => {
+                        const maxPagesToShow = 5;
+                        const totalPages = storiesData.totalPages;
+                        const currentPage = storiesData.currentPage;
+
+                        let startPage = Math.max(1, currentPage - 2);
+                        const endPage = Math.min(totalPages, startPage + maxPagesToShow - 1);
+
+                        // Adjust startPage if we are near the end
+                        if (endPage - startPage + 1 < maxPagesToShow && startPage > 1) {
+                          startPage = Math.max(1, endPage - maxPagesToShow + 1);
                         }
-                        if (pageNum > 0 && pageNum <= storiesData.totalPages) {
-                          return pageNum;
-                        }
-                        return null;
-                      }).filter(Boolean).map((pageNum) => (
+
+                        return Array.from(
+                          { length: Math.min(maxPagesToShow, totalPages) },
+                          (_, i) => startPage + i
+                        );
+                      })().map((pageNum) => (
                         <button
                           key={pageNum}
                           onClick={() => handlePageChange(pageNum as number)}
                           className={`px-3 py-2 rounded-md text-sm transition-colors ${pageNum === storiesData.currentPage
-                              ? "bg-purple-600 text-white"
-                              : "bg-white border border-gray-300 text-gray-700 hover:bg-gray-50"
+                            ? "bg-purple-600 text-white"
+                            : "bg-white border border-gray-300 text-gray-700 hover:bg-gray-50"
                             }`}
                         >
                           {pageNum}
@@ -498,8 +501,8 @@ export default function AccountContent({ user }: AccountContentProps) {
                       onClick={() => handlePageChange(storiesData.currentPage + 1)}
                       disabled={!storiesData.hasNextPage}
                       className={`flex items-center gap-1 px-3 py-2 rounded-md text-sm transition-colors ${storiesData.hasNextPage
-                          ? "bg-white border border-gray-300 text-gray-700 hover:bg-gray-50"
-                          : "bg-gray-100 text-gray-400 cursor-not-allowed"
+                        ? "bg-white border border-gray-300 text-gray-700 hover:bg-gray-50"
+                        : "bg-gray-100 text-gray-400 cursor-not-allowed"
                         }`}
                     >
                       Next
