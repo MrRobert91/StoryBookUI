@@ -194,17 +194,14 @@ logger.info(f"Image model: {SELECTED_IMAGE_MODEL}")
 # ============================================================================
 # CONFIGURATION
 # ============================================================================
-DEFAULT_NUM_CHAPTERS = int(os.getenv("NUM_CHAPTERS", "3"))
-WORDS_PER_CHAPTER = 350
-'''
-# Asegura estilo infantil ilustrado (no realista)
-CHILD_ILLUSTRATION_SUFFIX = (
-    "Child-friendly storybook illustration; whimsical, cartoon style; soft lines and rounded shapes; "
-    "bright pastel colors; friendly characters; no photorealistic, no realistic, no camera, no lens, "
-    "no photographic terms."
-)
-'''
+from api.prompts.story_prompts import STORY_SYSTEM_PROMPT, IMAGE_PROMPT_SYSTEM, DEFAULT_NUM_CHAPTERS, WORDS_PER_CHAPTER
 
+# ... (imports remain)
+
+# ============================================================================
+# CONFIGURATION
+# ============================================================================
+# DEFAULT_NUM_CHAPTERS & WORDS_PER_CHAPTER are now imported
 
 # ============================================================================
 # IMAGE GENERATION
@@ -212,11 +209,7 @@ CHILD_ILLUSTRATION_SUFFIX = (
 _image_counter = {"cover": 0, "chapter": 0}
 
 def generate_image(prompt: str, model: str = None, image_type: str = "image") -> str:
-    """
-    Generate image using OpenAI API and upload to Supabase Storage.
-    Returns the Supabase Storage URL instead of the temporary OpenAI URL.
-    Handles both URL-based models (DALL-E 3) and base64 models (GPT-Image-1-Mini).
-    """
+    # ... (function body remains same)
     model_name = IMAGE_MODELS.get((model or SELECTED_IMAGE_MODEL).lower(), SELECTED_IMAGE_MODEL)
     logger.info(f"Generating image with {model_name}, prompt length: {len(prompt)}")
     
@@ -303,19 +296,11 @@ def make_image_prompt(text: str) -> str:
         response = image_llm.invoke([
             {
                 "role": "system",
-                "content": (
-                    "Create a concise image prompt suitable for children's books. "
-                    "The result MUST describe an illustration in a whimsical storybook/cartoon style. "
-                    "Use bright, pastel colors, soft lines, friendly characters, and magical elements. "
-                    "AVOID any scary, violent, dark, or realistic/photorealistic imagery. "
-                    "Do not mention cameras, lenses, or photographic terms. "
-                    "Return ONLY the prompt text."
-                ),
+                "content": IMAGE_PROMPT_SYSTEM,
             },
             {"role": "user", "content": f"Story text:\n\n{text[:2000]}"},
         ])
         prompt = response.content.strip() if hasattr(response, "content") else str(response).strip()
-        
         
         logger.debug("Child-friendly prompt: %s", prompt[:200])
         return prompt
@@ -334,26 +319,7 @@ story_llm = ChatGroq(
     temperature=0.7,
 )
 
-story_system_prompt = f"""Generate creative fantasy stories for children with exactly {DEFAULT_NUM_CHAPTERS} chapters.
-
-IMPORTANT GUIDELINES:
-- Each chapter must have approximately {WORDS_PER_CHAPTER} words
-- Content must be family-friendly and appropriate for children
-- Use colorful, imaginative descriptions
-- Include positive messages and friendly characters
-- Return structured JSON with 'title' and 'chapters' array
-- Each chapter must have 'title' and 'content' fields
-
-Example structure:
-{{
-  "title": "The Dragon's Adventure",
-  "chapters": [
-    {{"title": "Chapter 1: The Discovery", "content": "Once upon a time..."}},
-    {{"title": "Chapter 2: The Journey", "content": "The young dragon..."}},
-    {{"title": "Chapter 3: The Challenge", "content": "The dragon faced a challenge..."}},
-    {{"title": "Chapter 4: The Triumph", "content": "The dragon triumphed..."}}
-  ]
-}}"""
+# STORY_SYSTEM_PROMPT is imported now
 
 #  CAMBIO: No usar create_agent, usar with_structured_output directamente
 story_agent = story_llm.with_structured_output(Story, method="json_mode")
@@ -377,7 +343,7 @@ def story_generation_node(state: StoryState):
     
     # Construir mensajes con system prompt
     full_messages = [
-        {"role": "system", "content": story_system_prompt},
+        {"role": "system", "content": STORY_SYSTEM_PROMPT},
         *messages
     ]
     
