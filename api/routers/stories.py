@@ -11,7 +11,7 @@ from api.services.user_service import UserProfile, deduct_credit
 from api.core import config
 from api.celery_app import celery_app
 from api.tasks import generate_story_task
-from api.agents_test import graph # Esto podría necesitar más refactorización a futuro
+from api.agents import graph # Esto podría necesitar más refactorización a futuro
 
 router = APIRouter()
 logger = logging.getLogger(__name__)

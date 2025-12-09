@@ -2,7 +2,7 @@ import os
 import json
 import logging
 from api.celery_app import celery_app
-from api.agents_test import graph
+from api.agents import graph
 from supabase import create_client
 
 # Configurar logger
