@@ -16,3 +16,4 @@ requests
 celery[redis]
 redis
 pytest
+asgiref
