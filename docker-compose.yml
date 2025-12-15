@@ -11,6 +11,7 @@ services:
       - SUPABASE_URL=${SUPABASE_URL}
       - SUPABASE_KEY=${SUPABASE_KEY}
       - REDIS_URL=${REDIS_URL}
+      - IMAGE_MODEL=dalle-3
       - PYTHONPATH=/app
 
   worker:
@@ -23,4 +24,5 @@ services:
       - SUPABASE_URL=${SUPABASE_URL}
       - SUPABASE_KEY=${SUPABASE_KEY}
       - REDIS_URL=${REDIS_URL}
+      - IMAGE_MODEL=dalle-3
       - PYTHONPATH=/app
