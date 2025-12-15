@@ -2,7 +2,7 @@ import os
 import sys
 import pytest
 from unittest.mock import MagicMock
-from api.agents import Story
+from api.agents.utils import Story
 
 # Add the project root to PYTHONPATH so we can import 'api'
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))

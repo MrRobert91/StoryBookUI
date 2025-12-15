@@ -6,12 +6,12 @@ import re
 import json
 import logging
 
-from api.dependencies import get_user_with_credits
+from api.core.dependencies import get_user_with_credits
 from api.services.user_service import UserProfile, deduct_credit
 from api.core import config
-from api.celery_app import celery_app
-from api.tasks import generate_story_task
-from api.agents import graph # Esto podría necesitar más refactorización a futuro
+from api.celery_tasks.app import celery_app
+from api.celery_tasks.tasks import generate_story_task
+from api.agents.story_agent import graph
 
 router = APIRouter()
 logger = logging.getLogger(__name__)

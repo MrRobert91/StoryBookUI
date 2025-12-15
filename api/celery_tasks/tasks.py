@@ -1,11 +1,13 @@
+from celery import Celery
 import os
+import asyncio
+from asgiref.sync import async_to_sync
 import json
-import logging
-from api.celery_app import celery_app
-from api.agents import graph
+from api.celery_tasks.app import celery_app
+from api.agents.story_agent import graph, StoryState
 from supabase import create_client
+import logging
 
-# Configurar logger
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.INFO)
 

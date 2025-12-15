@@ -11,7 +11,8 @@ sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 
 import pytest
 from unittest.mock import patch, MagicMock
-from api.agents import story_generation_node, StoryState, Story
+from api.agents.story_agent import story_generation_node
+from api.agents.utils import Story, StoryState
 from api.prompts.story_prompts import STORY_SYSTEM_PROMPT
 
 # ============================================================================
@@ -22,8 +23,8 @@ def test_story_generation_node_success(mock_story_agent):
     """Test story generation with mocked agent response."""
     logger.info(">>> TEST START: test_story_generation_node_success")
     
-    # Mock the 'story_agent' imported in api.agents
-    with patch("api.agents.story_agent", mock_story_agent):
+    # Mock the 'story_agent' imported in api.agents.story_agent
+    with patch("api.agents.story_agent.story_agent", mock_story_agent):
         state = StoryState(
             messages=[{"role": "user", "content": "Write a story about a brave toaster"}],
             story_data=None,
@@ -68,7 +69,7 @@ def test_real_story_generation_integration():
         pytest.fail("GROQ_API_KEY must be set for integration tests")
 
     # Import the real agent (it's already configured with the real key if env var is set)
-    from api.agents import story_agent
+    from api.agents.story_agent import story_agent
     
     messages = [
         {"role": "user", "content": "Write a very short 1-chapter story about a happy cloud."}

@@ -35,4 +35,4 @@ HTTP_PID=$!
 HOSTNAME=$(hostname)
 echo "Starting Celery worker with hostname: celery@$HOSTNAME"
 
-exec celery -A api.tasks worker --loglevel=info --pool=solo -n "celery@$HOSTNAME"
+exec celery -A api.celery_tasks.tasks worker --loglevel=info --pool=solo -n "celery@$HOSTNAME"
