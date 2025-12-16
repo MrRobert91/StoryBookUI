@@ -1,31 +1,25 @@
-import { createClient } from "@/lib/supabase/server"
+import { createRouteHandlerClient } from "@supabase/auth-helpers-nextjs"
+import { cookies } from "next/headers"
 import { type NextRequest, NextResponse } from "next/server"
 
 export async function GET(request: NextRequest) {
-  const { searchParams, origin } = new URL(request.url)
-  const code = searchParams.get("code")
-  const next = searchParams.get("next") ?? "/"
+  const requestUrl = new URL(request.url)
+  const code = requestUrl.searchParams.get("code")
+  const origin = requestUrl.origin
 
   if (code) {
-    const supabase = await createClient()
+    const cookieStore = cookies()
+    const supabase = createRouteHandlerClient({ cookies: () => cookieStore })
 
     try {
-      const { error } = await supabase.auth.exchangeCodeForSession(code)
-
-      if (!error) {
-        console.log("Email confirmation successful")
-        // Redirect to success page or dashboard
-        return NextResponse.redirect(`${origin}/auth/confirmed`)
-      } else {
-        console.error("Email confirmation error:", error)
-        return NextResponse.redirect(`${origin}/auth/error?message=${encodeURIComponent(error.message)}`)
-      }
+      await supabase.auth.exchangeCodeForSession(code)
+      return NextResponse.redirect(`${origin}/auth/confirmed`)
     } catch (error) {
-      console.error("Email confirmation exception:", error)
-      return NextResponse.redirect(`${origin}/auth/error?message=${encodeURIComponent("Confirmation failed")}`)
+      console.error("Auth callback error:", error)
+      return NextResponse.redirect(`${origin}/auth/error?message=Auth failed`)
     }
   }
 
   // Return the user to an error page with instructions
-  return NextResponse.redirect(`${origin}/auth/error?message=${encodeURIComponent("No confirmation code provided")}`)
+  return NextResponse.redirect(`${origin}/auth/error?message=No code provided`)
 }

@@ -21,18 +21,10 @@ export async function updateSession(request: NextRequest) {
     const supabase = createMiddlewareClient({ req: request, res })
 
     // Check if this is an auth callback
-    const requestUrl = new URL(request.url)
-    const code = requestUrl.searchParams.get("code")
+    // We let the route handler deal with the code exchange to avoid conflicts
+    // and ensuring proper cookie handling in the callback route.
 
-    if (code) {
-      try {
-        await supabase.auth.exchangeCodeForSession(code)
-        return NextResponse.redirect(new URL("/", request.url))
-      } catch (error) {
-        console.warn("Auth callback error:", error)
-        return NextResponse.redirect(new URL("/auth/login", request.url))
-      }
-    }
+    // For client-side routing, we don't need to protect routes in middleware
 
     // For client-side routing, we don't need to protect routes in middleware
     // The client components will handle authentication checks
