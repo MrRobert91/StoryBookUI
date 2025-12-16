@@ -129,8 +129,8 @@ export default function LoginForm() {
         {message && (
           <div
             className={`px-4 py-3 rounded-lg ${message.type === "error"
-                ? "bg-red-50 border border-red-200 text-red-700"
-                : "bg-green-50 border border-green-200 text-green-700"
+              ? "bg-red-50 border border-red-200 text-red-700"
+              : "bg-green-50 border border-green-200 text-green-700"
               }`}
           >
             {message.text}
@@ -172,8 +172,8 @@ export default function LoginForm() {
             type="submit"
             disabled={isLoading || !email || !password}
             className={`w-full py-6 text-lg font-medium rounded-lg h-[60px] transition-colors ${isLoading || !email || !password
-                ? "bg-gray-400 cursor-not-allowed text-gray-600"
-                : "bg-[#2b725e] hover:bg-[#235e4c] text-white"
+              ? "bg-gray-400 cursor-not-allowed text-gray-600"
+              : "bg-[#2b725e] hover:bg-[#235e4c] text-white"
               }`}
           >
             {isLoading ? (
@@ -204,7 +204,7 @@ export default function LoginForm() {
               const { error } = await supabase.auth.signInWithOAuth({
                 provider: "google",
                 options: {
-                  redirectTo: `${window.location.origin}/api/auth/callback`,
+                  redirectTo: `${window.location.origin}/auth/callback`,
                 },
               })
               if (error) throw error

@@ -349,8 +349,8 @@ export default function SignUpForm() {
         {message && (
           <div
             className={`px-4 py-3 rounded-lg ${message.type === "error"
-                ? "bg-red-50 border border-red-200 text-red-700"
-                : "bg-green-50 border border-green-200 text-green-700"
+              ? "bg-red-50 border border-red-200 text-red-700"
+              : "bg-green-50 border border-green-200 text-green-700"
               }`}
           >
             {message.text}
@@ -370,10 +370,10 @@ export default function SignUpForm() {
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 className={`w-full px-3 py-2 pr-10 bg-white border rounded-md text-gray-900 placeholder:text-gray-500 focus:outline-none focus:ring-2 focus:border-transparent ${emailStatus.error
-                    ? "border-red-300 focus:ring-red-500"
-                    : emailStatus.available === true
-                      ? "border-green-300 focus:ring-green-500"
-                      : "border-gray-300 focus:ring-purple-500"
+                  ? "border-red-300 focus:ring-red-500"
+                  : emailStatus.available === true
+                    ? "border-green-300 focus:ring-green-500"
+                    : "border-gray-300 focus:ring-purple-500"
                   }`}
                 disabled={isLoading}
                 required
@@ -406,10 +406,10 @@ export default function SignUpForm() {
                 value={username}
                 onChange={(e) => setUsername(e.target.value.toLowerCase())}
                 className={`w-full px-3 py-2 pr-10 bg-white border rounded-md text-gray-900 placeholder:text-gray-500 focus:outline-none focus:ring-2 focus:border-transparent ${usernameStatus.error
-                    ? "border-red-300 focus:ring-red-500"
-                    : usernameStatus.available === true
-                      ? "border-green-300 focus:ring-green-500"
-                      : "border-gray-300 focus:ring-purple-500"
+                  ? "border-red-300 focus:ring-red-500"
+                  : usernameStatus.available === true
+                    ? "border-green-300 focus:ring-green-500"
+                    : "border-gray-300 focus:ring-purple-500"
                   }`}
                 disabled={isLoading}
                 required
@@ -441,10 +441,10 @@ export default function SignUpForm() {
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               className={`w-full px-3 py-2 bg-white border rounded-md text-gray-900 focus:outline-none focus:ring-2 focus:border-transparent ${password && password.length < 6
-                  ? "border-red-300 focus:ring-red-500"
-                  : password && password.length >= 6
-                    ? "border-green-300 focus:ring-green-500"
-                    : "border-gray-300 focus:ring-purple-500"
+                ? "border-red-300 focus:ring-red-500"
+                : password && password.length >= 6
+                  ? "border-green-300 focus:ring-green-500"
+                  : "border-gray-300 focus:ring-purple-500"
                 }`}
               disabled={isLoading}
               required
@@ -460,8 +460,8 @@ export default function SignUpForm() {
             type="submit"
             disabled={!isFormValid || isLoading}
             className={`w-full py-6 text-lg font-medium rounded-lg h-[60px] transition-colors ${!isFormValid || isLoading
-                ? "bg-gray-400 cursor-not-allowed text-gray-600"
-                : "bg-[#2b725e] hover:bg-[#235e4c] text-white"
+              ? "bg-gray-400 cursor-not-allowed text-gray-600"
+              : "bg-[#2b725e] hover:bg-[#235e4c] text-white"
               }`}
           >
             {isLoading ? (
@@ -545,7 +545,7 @@ export default function SignUpForm() {
               const { error } = await supabase.auth.signInWithOAuth({
                 provider: "google",
                 options: {
-                  redirectTo: `${window.location.origin}/api/auth/callback`,
+                  redirectTo: `${window.location.origin}/auth/callback`,
                 },
               })
               if (error) throw error
