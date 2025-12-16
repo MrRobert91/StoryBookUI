@@ -4,9 +4,12 @@ import { useState } from "react"
 import { ChevronDown, ChevronUp } from "lucide-react"
 import { Card, CardContent } from "@/components/ui/card"
 
+import Link from "next/link"
+import React from "react"
+
 interface FAQItem {
   question: string
-  answer: string
+  answer: React.ReactNode
 }
 
 const faqData: FAQItem[] = [
@@ -66,9 +69,41 @@ const faqData: FAQItem[] = [
       "Yes! Cuentee is perfect for educators, homeschooling parents, and anyone looking to create educational content. You can generate stories that teach specific lessons, incorporate learning objectives, or explore particular themes and values.",
   },
   {
-    question: "Is there a limit to how many stories I can create?",
-    answer:
-      "With the free trial, you get 1 sample story. The Pay as You Go plan gives you 10 stories for $10, and you can purchase additional credits anytime. There are no monthly limits or restrictions - use your credits whenever you want!",
+    question: "Do you use cookies?",
+    answer: (
+      <>
+        Yes, we use cookies to ensure you get the best experience on our website. For detailed information about how we use
+        cookies, please view our{" "}
+        <Link href="/cookie-policy" className="text-purple-600 hover:text-purple-700 underline">
+          Cookie Policy
+        </Link>
+        .
+      </>
+    ),
+  },
+  {
+    question: "Where can I find your Privacy Policy?",
+    answer: (
+      <>
+        Your privacy is our priority. You can read our full{" "}
+        <Link href="/privacy-policy" className="text-purple-600 hover:text-purple-700 underline">
+          Privacy Policy
+        </Link>{" "}
+        to understand how we collect, use, and protect your data.
+      </>
+    ),
+  },
+  {
+    question: "What are the Terms of Service?",
+    answer: (
+      <>
+        By using Cuentee, you agree to our{" "}
+        <Link href="/terms-of-service" className="text-purple-600 hover:text-purple-700 underline">
+          Terms of Service
+        </Link>
+        . Please read them carefully to understand your rights and responsibilities.
+      </>
+    ),
   },
 ]
 
@@ -100,7 +135,7 @@ export default function FAQSection() {
           {openItems.includes(index) && (
             <CardContent className="pt-0 pb-6">
               <div className="border-t pt-4">
-                <p className="text-gray-600 leading-relaxed">{item.answer}</p>
+                <div className="text-gray-600 leading-relaxed">{item.answer}</div>
               </div>
             </CardContent>
           )}

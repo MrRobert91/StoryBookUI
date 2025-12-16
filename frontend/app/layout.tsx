@@ -4,6 +4,7 @@ import { Geist } from "next/font/google"
 import "./globals.css"
 import { AuthProvider } from "@/components/auth-provider"
 import { createClient, isSupabaseConfigured } from "@/lib/supabase/server"
+import { Footer } from "@/components/footer"
 
 const geist = Geist({
   subsets: ["latin"],
@@ -12,7 +13,7 @@ const geist = Geist({
 export const metadata: Metadata = {
   title: "Supabase Auth with SSR",
   description: "A Next.js application with Supabase authentication using SSR",
-    generator: 'v0.dev'
+  generator: 'v0.dev'
 }
 
 export default async function RootLayout({
@@ -35,7 +36,12 @@ export default async function RootLayout({
   return (
     <html lang="en">
       <body className={geist.className}>
-        <AuthProvider initialSession={initialSession}>{children}</AuthProvider>
+        <AuthProvider initialSession={initialSession}>
+          <div className="flex flex-col min-h-screen">
+            <main className="flex-grow">{children}</main>
+            <Footer />
+          </div>
+        </AuthProvider>
       </body>
     </html>
   )
