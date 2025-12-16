@@ -97,6 +97,13 @@ class SupabaseClientWrapper {
         }
       },
 
+      signInWithOAuth: async (credentials: any) => {
+        if (!rateLimiter.canMakeRequest()) {
+          throw new Error("Rate limit exceeded. Please wait before trying again.")
+        }
+        return await this.client.auth.signInWithOAuth(credentials)
+      },
+
       signUp: async (credentials: any) => {
         if (!rateLimiter.canMakeRequest()) {
           throw new Error("Rate limit exceeded. Please wait before trying again.")
