@@ -1,50 +1,112 @@
 # StoryBookUI
 
-StoryBookUI is a simple prototype for generating personalized children's tales using AI. The frontend has been migrated to **Next.js** using the App Router while the backend remains in FastAPI.
+StoryBookUI is a prototype application for generating personalized children's tales using AI. It features a modern frontend built with **Next.js 15** and a robust backend powered by **FastAPI**, capable of generating both text stories and illustrated tales using advanced AI models.
 
 ## Features
 
-- Responsive UI with pages: Home, Make a Tale, About Us, Pricing and FAQ
-- Tale generation handled by a FastAPI service
-- Docker setup to run the frontend and the API
-- Placeholder authentication structure ready for future Supabase integration
+- **Personalized Story Generation**: Create unique stories based on user prompts.
+- **Illustrated Tales**: Generate stories with accompanying images using a LangGraph workflow.
+- **Multiple AI Models**:
+  - Text generation: **Llama 3** (via Groq).
+  - Image generation: **DALL-E 3**, **GPT-image-1**, **GPT-Image-1-mini**, **GPT-Image-1.5**.
+- **User System**:
+  - Secure Authentication via **Supabase Auth**.
+  - Credit-based system for controlling usage.
+- **Responsive UI**: Modern, accessible interface built with Radix UI and TailwindCSS.
+- **Background Processing**: Asynchronous task handling for long-running generation jobs.
+
+## Architecture & Tech Stack
+
+The project follows a decoupled architecture:
+
+### Frontend (`/frontend`)
+- **Framework**: Next.js 15 (App Router)
+- **Styling**: TailwindCSS, Tailwind Merge, CLSX
+- **Components**: Radix UI (Primitives), Lucide React (Icons)
+- **State/Auth**: Supabase Auth Helpers
+
+### Backend (`/api`)
+- **Framework**: FastAPI
+- **Asynchronous Tasks**: Celery with Redis broker
+- **AI Integration**:
+  - **LangChain** & **LangGraph** for orchestration.
+  - **Groq** for high-speed LLM inference.
+  - **OpenAI** for image generation.
+- **Database**: Supabase (PostgreSQL)
+
+## Project Structure
+
+```
+├── frontend/           # Next.js application
+│   ├── app/            # App Router pages and layouts
+│   └── components/     # Reusable UI components
+├── api/                # FastAPI backend service
+│   ├── agents/         # AI agents and workflows (LangGraph)
+│   ├── celery_tasks/   # Background jobs
+│   ├── routers/        # API endpoints
+│   └── services/       # Business logic and external services
+├── docker-compose.yml  # Container orchestration setup
+└── README.md
+```
 
 ## Quick Start
 
 ### Prerequisites
-- Docker and Docker Compose installed
-
-### Running locally
-```bash
-git clone <repo>
-cd StoryBookUI
-npm install --prefix nextapp
-npm run dev --prefix nextapp
-```
-The frontend will be available at `http://localhost:3000`.
+- Docker and Docker Compose
+- Node.js 18+ (for local frontend dev)
+- Python 3.10+ (for local backend dev)
+- Accounts/API Keys for: OpenAI, Groq, Supabase
 
 ### Environment Variables
-Copy `.env.example` to `.env` and fill in the required values for OpenAI, Groq and Supabase:
+Create a `.env` file in the root directory by copying `.env.example`:
+
 ```bash
-OPENAI_API_KEY=<your-openai-key>
-GROQ_API_KEY=<your-groq-key>
-NEXT_PUBLIC_SUPABASE_URL=<your-supabase-url>
-NEXT_PUBLIC_SUPABASE_ANON_KEY=<your-supabase-anon-key>
+# AI Services
+OPENAI_API_KEY=your_openai_key
+GROQ_API_KEY=your_groq_key
+
+# Supabase
+NEXT_PUBLIC_SUPABASE_URL=your_supabase_url
+NEXT_PUBLIC_SUPABASE_ANON_KEY=your_supabase_anon_key
+SUPABASE_SERVICE_ROLE_KEY=your_service_role_key
+
+# Backend
 NEXT_PUBLIC_API_URL=http://localhost:8000
+REDIS_URL=redis://localhost:6379/0
 ```
 
-## Project Structure
-```
-nextapp/        Next.js application
-api/            FastAPI backend
-docker-compose.yml  Docker orchestration
+### Running with Docker
+
+Start both the frontend and backend services:
+
+```bash
+docker-compose up --build
 ```
 
-### Authentication
-The app includes React context and hooks prepared for a future Supabase integration. Buttons for Register, Login and Logout are visible in the header but currently use mock state.
+- Frontend: `http://localhost:3000`
+- API Docs: `http://localhost:8000/docs`
 
-## API
-The FastAPI service exposes a `/generate-story` endpoint that returns a short tale based on the provided description.
+### Running Locally
+
+**Backend:**
+```bash
+cd StoryBookUI
+# Install dependencies
+pip install -r api/requirements.txt
+# Run Redis (required for Celery)
+# ... start redis server ...
+# Start API
+uvicorn api.main:app --reload
+# Start Celery Worker (in a separate terminal)
+celery -A api.celery_tasks.app worker --loglevel=info
+```
+
+**Frontend:**
+```bash
+cd StoryBookUI/frontend
+npm install
+npm run dev
+```
 
 ## License
 MIT
