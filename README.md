@@ -2,6 +2,9 @@
 
 StoryBookUI is a prototype application for generating personalized children's tales using AI. It features a modern frontend built with **Next.js 15** and a robust backend powered by **FastAPI**, capable of generating both text stories and illustrated tales using advanced AI models.
 
+> [!NOTE]
+> The application is currently deployed and available for use at **[https://www.cuentee.com/](https://www.cuentee.com/)**.
+
 ## Features
 
 - **Personalized Story Generation**: Create unique stories based on user prompts.
