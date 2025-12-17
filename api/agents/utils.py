@@ -150,6 +150,7 @@ IMAGE_MODELS = {
     "dalle-2": "dall-e-2",
     "gpt-image-1": "gpt-image-1",
     "gpt-image-1-mini": "gpt-image-1-mini",
+    "gpt-image-1.5": "gpt-image-1.5",
 }
 DEFAULT_IMAGE_MODEL = os.getenv("IMAGE_MODEL", "dall-e-3").strip().lower()
 SELECTED_IMAGE_MODEL = IMAGE_MODELS.get(DEFAULT_IMAGE_MODEL, "dall-e-3")
@@ -168,7 +169,7 @@ def generate_image(prompt: str, model: str = None, image_type: str = "image") ->
             "n": 1
         }
         
-        is_base64_model = model_name in ["gpt-image-1", "gpt-image-1-mini"]
+        is_base64_model = model_name in ["gpt-image-1", "gpt-image-1-mini", "gpt-image-1.5"]
         
         if is_base64_model:
             params["quality"] = "low"
