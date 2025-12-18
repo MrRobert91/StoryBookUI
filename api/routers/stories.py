@@ -141,3 +141,50 @@ async def generate_story_async(request: StoryRequest, user: UserProfile = Depend
     except Exception as e:
         logger.error("Error enqueuing task: %s", e, exc_info=True)
         raise HTTPException(status_code=503, detail="Service busy or Redis error.")
+
+# --- Guided Story ---
+
+class GuidedStoryRequest(BaseModel):
+    age_group: str
+    protagonist: str
+    scientific_topic: str
+    mission: str
+    visual_style: str
+
+@router.post("/generate_guided_story_async")
+async def generate_guided_story_async(req: GuidedStoryRequest, user: UserProfile = Depends(get_user_with_credits)):
+    """
+    Endpoint para generar un cuento guiado.
+    De momento devuelve un placeholder síncrono para probar la integración.
+    """
+    logger.info(f"Generating guided story for user {user.id} with params: {req}")
+
+    # TODO: Implementar la logica real asincrona o con LangGraph
+    
+    # Placeholder story
+    placeholder_story = {
+        "title": f"The {req.protagonist}'s Mission: {req.mission}",
+        "chapters": [
+            {
+                "title": "Chapter 1: The Beginning",
+                "content": f"Once upon a time, there was a {req.protagonist} who lived in a world of {req.visual_style} style. They were {req.age_group} years old. One day, they decided to explore {req.scientific_topic}.",
+                "image_url": "https://placehold.co/600x400?text=Chapter+1"
+            },
+            {
+                "title": "Chapter 2: The Mission",
+                "content": f"Their mission was {req.mission}. It was a difficult task, but our hero was brave.",
+                 "image_url": "https://placehold.co/600x400?text=Chapter+2"
+            },
+            {
+                "title": "Chapter 3: Success",
+                "content": f"In the end, they learned all about {req.scientific_topic} and completed {req.mission}. The end.",
+                 "image_url": "https://placehold.co/600x400?text=Chapter+3"
+            }
+        ]
+    }
+    
+    # Simular descuento de crédito si fuera necesario, aunque por ser placeholder quizas no deberiamos?
+    # Para ser consistentes con el auth, dejemoslo comentado o activo según requerimiento.
+    # user_service.deduct_credit(user) # Descomentar si queremos cobrar creditos por el placeholder.
+    
+    return placeholder_story
