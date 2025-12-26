@@ -8,7 +8,7 @@ import { storyOperations, type Story, type PaginatedStoriesResult } from "@/lib/
 import StoryModal from "./story-modal"
 import StripeModal from "./stripe-modal"
 import { Loader2, Edit2, Check, X, Globe, Lock, ChevronLeft, ChevronRight } from "lucide-react"
-import { getStoryPreview } from "./story-preview"
+import { getStoryPreview, getCoverImage } from "./story-preview"
 
 interface AccountContentProps {
   user: User
@@ -426,6 +426,18 @@ export default function AccountContent({ user }: AccountContentProps) {
                         </button>
                       </div>
                     </div>
+                    {getCoverImage(story.content) && (
+                      <div className="mb-3 rounded overflow-hidden aspect-video relative">
+                        <img
+                          src={getCoverImage(story.content)!}
+                          alt={story.title}
+                          className="object-cover w-full h-full hover:scale-105 transition-transform duration-500"
+                          onError={(e) => {
+                            (e.target as HTMLImageElement).style.display = 'none';
+                          }}
+                        />
+                      </div>
+                    )}
                     {story.prompt && <p className="text-xs text-purple-600 mb-2 italic">"{story.prompt}"</p>}
                     <p className="text-sm text-gray-600 mb-3 line-clamp-2">
                       {typeof story.content === "string"

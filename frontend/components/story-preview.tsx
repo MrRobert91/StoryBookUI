@@ -28,3 +28,12 @@ export function getStoryPreview(content: string): string {
 
   return content
 }
+
+export function getCoverImage(content: string): string | null {
+  try {
+    const parsed = JSON.parse(content)
+    return parsed.cover_image_url || null
+  } catch (e) {
+    return null
+  }
+}

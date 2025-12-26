@@ -6,7 +6,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { storyOperations, type Story, type PaginatedStoriesResult } from "@/lib/supabase/stories"
 import { BookOpen, Calendar, User, Loader2, AlertCircle, ChevronLeft, ChevronRight, Eye } from "lucide-react"
 import StoryModal from "@/components/story-modal"
-import { getStoryPreview } from "@/components/story-preview"
+import { getStoryPreview, getCoverImage } from "@/components/story-preview"
 
 const ITEMS_PER_PAGE_OPTIONS = [12, 24, 48, 96]
 
@@ -186,6 +186,18 @@ export default function GalleryPage() {
                     </div>
                   </CardHeader>
                   <CardContent className="pt-0">
+                    {getCoverImage(story.content) && (
+                      <div className="mb-4 rounded-md overflow-hidden aspect-video relative">
+                        <img
+                          src={getCoverImage(story.content)!}
+                          alt={story.title}
+                          className="object-cover w-full h-full hover:scale-105 transition-transform duration-500"
+                          onError={(e) => {
+                            (e.target as HTMLImageElement).style.display = 'none';
+                          }}
+                        />
+                      </div>
+                    )}
                     {story.prompt && (
                       <p className="text-purple-600 text-xs mb-3 italic">"{truncateContent(story.prompt, 80)}"</p>
                     )}
@@ -216,11 +228,10 @@ export default function GalleryPage() {
                   <button
                     onClick={() => handlePageChange(storiesData.currentPage - 1)}
                     disabled={!storiesData.hasPreviousPage}
-                    className={`flex items-center gap-1 px-3 py-2 rounded-md text-sm transition-colors ${
-                      storiesData.hasPreviousPage
-                        ? "bg-white border border-gray-300 text-gray-700 hover:bg-gray-50"
-                        : "bg-gray-100 text-gray-400 cursor-not-allowed"
-                    }`}
+                    className={`flex items-center gap-1 px-3 py-2 rounded-md text-sm transition-colors ${storiesData.hasPreviousPage
+                      ? "bg-white border border-gray-300 text-gray-700 hover:bg-gray-50"
+                      : "bg-gray-100 text-gray-400 cursor-not-allowed"
+                      }`}
                   >
                     <ChevronLeft className="h-4 w-4" />
                     Previous
@@ -232,11 +243,10 @@ export default function GalleryPage() {
                       <button
                         key={pageNum}
                         onClick={() => handlePageChange(pageNum)}
-                        className={`px-3 py-2 rounded-md text-sm transition-colors ${
-                          pageNum === storiesData.currentPage
-                            ? "bg-purple-600 text-white"
-                            : "bg-white border border-gray-300 text-gray-700 hover:bg-gray-50"
-                        }`}
+                        className={`px-3 py-2 rounded-md text-sm transition-colors ${pageNum === storiesData.currentPage
+                          ? "bg-purple-600 text-white"
+                          : "bg-white border border-gray-300 text-gray-700 hover:bg-gray-50"
+                          }`}
                       >
                         {pageNum}
                       </button>
@@ -247,11 +257,10 @@ export default function GalleryPage() {
                   <button
                     onClick={() => handlePageChange(storiesData.currentPage + 1)}
                     disabled={!storiesData.hasNextPage}
-                    className={`flex items-center gap-1 px-3 py-2 rounded-md text-sm transition-colors ${
-                      storiesData.hasNextPage
-                        ? "bg-white border border-gray-300 text-gray-700 hover:bg-gray-50"
-                        : "bg-gray-100 text-gray-400 cursor-not-allowed"
-                    }`}
+                    className={`flex items-center gap-1 px-3 py-2 rounded-md text-sm transition-colors ${storiesData.hasNextPage
+                      ? "bg-white border border-gray-300 text-gray-700 hover:bg-gray-50"
+                      : "bg-gray-100 text-gray-400 cursor-not-allowed"
+                      }`}
                   >
                     Next
                     <ChevronRight className="h-4 w-4" />
