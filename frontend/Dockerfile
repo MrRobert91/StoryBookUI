@@ -2,13 +2,13 @@
 FROM node:20-alpine AS deps
 WORKDIR /app
 COPY package.json pnpm-lock.yaml* ./
-RUN npm install -g pnpm && pnpm install --no-frozen-lockfile
+RUN npm install -g pnpm && pnpm install --frozen-lockfile
 
 # Stage 2: Builder
 FROM node:20-alpine AS builder
 WORKDIR /app
 COPY package.json pnpm-lock.yaml* ./
-RUN npm install -g pnpm && pnpm install --no-frozen-lockfile
+RUN npm install -g pnpm && pnpm install --frozen-lockfile
 COPY . .
 
 # --- IMPORTANTE: Definir los marcadores para el build ---
