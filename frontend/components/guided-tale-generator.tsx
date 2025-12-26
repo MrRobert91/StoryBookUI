@@ -62,6 +62,11 @@ export default function GuidedTaleGenerator() {
     const [isGenerating, setIsGenerating] = useState(false)
     const [generatedStory, setGeneratedStory] = useState<{ title: string; chapters: Chapter[] } | null>(null)
     const [error, setError] = useState<string | null>(null)
+    const [mounted, setMounted] = useState(false)
+
+    useEffect(() => {
+        setMounted(true)
+    }, [])
 
     const handleInputChange = (field: string, value: string) => {
         setFormData((prev) => ({
@@ -125,6 +130,8 @@ export default function GuidedTaleGenerator() {
             setIsGenerating(false)
         }
     }
+
+    if (!mounted) return null
 
     return (
         <div className="space-y-8">
