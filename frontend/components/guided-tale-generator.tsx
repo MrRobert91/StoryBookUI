@@ -7,11 +7,10 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 import { Label } from "@/components/ui/label"
 import { Input } from "@/components/ui/input"
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group"
-// Replaced Radix Select with native select to prevent hydration/portal crashes
-// import { Select... } from "@/components/ui/select" 
 import { Loader2, Sparkles, AlertCircle, Compass } from "lucide-react"
 import StoryViewer from "./story-viewer"
 import { supabase } from "@/lib/supabase/client"
+import { useStoryGeneration } from "@/hooks/use-story-generation"
 
 interface Chapter {
     title: string
@@ -51,6 +50,14 @@ const MISSIONS = {
 
 export default function GuidedTaleGenerator() {
     const { user } = useAuth()
+    const {
+        isGenerating,
+        status,
+        storyData,
+        error: generationError,
+        generateStory
+    } = useStoryGeneration()
+
     const [formData, setFormData] = useState({
         age: "",
         protagonistName: "",
@@ -60,9 +67,6 @@ export default function GuidedTaleGenerator() {
         visualStyle: "",
     })
 
-    const [isGenerating, setIsGenerating] = useState(false)
-    const [generatedStory, setGeneratedStory] = useState<{ title: string; chapters: Chapter[] } | null>(null)
-    const [error, setError] = useState<string | null>(null)
     const [mounted, setMounted] = useState(false)
 
     useEffect(() => {
@@ -92,43 +96,24 @@ export default function GuidedTaleGenerator() {
 
     const handleGenerate = async () => {
         if (!isFormValid()) return
-        setIsGenerating(true)
-        setError(null)
-        setGeneratedStory(null)
 
         try {
-            const fastApiUrl = process.env.NEXT_PUBLIC_FASTAPI_URL
-            if (!fastApiUrl) throw new Error("API URL not configured")
-
             const { data: { session } } = await supabase.auth.getSession()
             if (!session?.access_token) throw new Error("Authentication required")
 
-            const response = await fetch(`${fastApiUrl}/stories/generate_guided_story_async`, {
-                method: "POST",
-                headers: {
-                    "Content-Type": "application/json",
-                    Authorization: `Bearer ${session.access_token}`,
-                },
-                body: JSON.stringify({
+            await generateStory(
+                {
                     age_group: formData.age,
                     protagonist: `${formData.protagonistName}, ${formData.protagonistDesc}`,
                     scientific_topic: formData.scientificTopic,
                     mission: formData.mission,
                     visual_style: formData.visualStyle,
-                }),
-            })
-
-            if (!response.ok) {
-                throw new Error(`API Error: ${response.status}`)
-            }
-
-            const data = await response.json()
-            setGeneratedStory(data)
+                },
+                session.access_token,
+                "/stories/generate_guided_story_async"
+            )
         } catch (err) {
-            console.error(err)
-            setError(err instanceof Error ? err.message : "Failed to generate story")
-        } finally {
-            setIsGenerating(false)
+            console.error("Error initiating generation:", err)
         }
     }
 
@@ -205,7 +190,6 @@ export default function GuidedTaleGenerator() {
                                         </option>
                                     ))}
                             </select>
-                            {/* Chevron Icon simulation */}
                             <div className="absolute right-3 top-3 pointer-events-none opacity-50">
                                 <svg width="10" height="6" viewBox="0 0 10 6" fill="none" xmlns="http://www.w3.org/2000/svg">
                                     <path d="M1 1L5 5L9 1" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
@@ -265,10 +249,18 @@ export default function GuidedTaleGenerator() {
                     </div>
 
                     {/* Error Message */}
-                    {error && (
+                    {generationError && (
                         <div className="bg-red-50 text-red-600 p-3 rounded-md flex items-center gap-2 text-sm">
                             <AlertCircle className="h-4 w-4" />
-                            {error}
+                            {generationError}
+                        </div>
+                    )}
+
+                    {/* Status Message */}
+                    {isGenerating && (
+                        <div className="bg-blue-50 text-blue-600 p-3 rounded-md flex items-center gap-2 text-sm">
+                            <Loader2 className="h-4 w-4 animate-spin" />
+                            Generating your story... Status: {status}
                         </div>
                     )}
 
@@ -281,7 +273,7 @@ export default function GuidedTaleGenerator() {
                         {isGenerating ? (
                             <>
                                 <Loader2 className="mr-2 h-5 w-5 animate-spin" />
-                                Generating Guided Story...
+                                Generating...
                             </>
                         ) : (
                             <>
@@ -294,9 +286,12 @@ export default function GuidedTaleGenerator() {
             </Card>
 
             {/* Result Viewer */}
-            {generatedStory && (
+            {storyData?.chapters && (
                 <div className="animate-in fade-in slide-in-from-bottom-4 duration-700">
-                    <StoryViewer chapters={generatedStory.chapters} title={generatedStory.title} />
+                    <StoryViewer
+                        chapters={storyData.chapters as any[]}
+                        title={storyData.title || `The ${formData.protagonistName}'s Adventure`}
+                    />
                 </div>
             )}
         </div>

@@ -19,7 +19,11 @@ interface UseStoryGenerationReturn {
   status: StoryStatus
   storyData: StoryData | null
   error: string | null
-  generateStory: (topic: string, token: string) => Promise<void>
+  generateStory: (
+    topicOrPayload: string | object,
+    token: string,
+    endpoint?: string
+  ) => Promise<void>
   reset: () => void
 }
 
@@ -88,8 +92,10 @@ export function useStoryGeneration(): UseStoryGenerationReturn {
   )
 
   const generateStory = useCallback(
-    async (topic: string, token: string) => {
-      if (!topic.trim()) {
+    async (topicOrPayload: string | object, token: string, endpoint: string = "/stories/generate-story-async") => {
+
+      // Basic validation for string topic
+      if (typeof topicOrPayload === 'string' && !topicOrPayload.trim()) {
         setError("Topic cannot be empty")
         return
       }
@@ -102,15 +108,19 @@ export function useStoryGeneration(): UseStoryGenerationReturn {
       abortControllerRef.current = new AbortController()
 
       try {
+        const requestBody = typeof topicOrPayload === 'string'
+          ? { topic: topicOrPayload.trim() }
+          : topicOrPayload
+
         // Step 1: Send generation request
-        const initResponse = await fetch(`${fastApiUrl}/stories/generate-story-async`, {
+        const initResponse = await fetch(`${fastApiUrl}${endpoint}`, {
           method: "POST",
           headers: {
             Accept: "application/json",
             "Content-Type": "application/json",
             Authorization: `Bearer ${token}`,
           },
-          body: JSON.stringify({ topic: topic.trim() }),
+          body: JSON.stringify(requestBody),
           signal: abortControllerRef.current.signal,
         })
 
