@@ -151,53 +151,67 @@ class GuidedStoryRequest(BaseModel):
     mission: str
     visual_style: str
 
-from api.prompts.guided_story_prompts import GUIDED_PROMPTS
+from api.prompts.guided_story_prompts import VISUAL_STYLE_PROMPTS, TOPIC_PROMPTS, MISSION_PROMPTS
 
 @router.post("/generate_guided_story_async")
 async def generate_guided_story_async(req: GuidedStoryRequest, user: UserProfile = Depends(get_user_with_credits)):
     """
     Endpoint para generar un cuento guiado asíncrono.
     Configura el prompt basado en las opciones seleccionadas y encola la tarea.
-    Separa el prompt de la historia de los estilos visuales.
+    Separa el prompt de la historia de los estilos visuales usando descripciones ricas.
     """
     logger.info(f"Generating guided story for user {user.id} with params: {req}")
 
-    # 1. Parsear el protagonista (Nombre, Descripción)
-    # Esperamos que venga como "Nombre, Descripción"
+    # 1. Parsear el protagonista
     if "," in req.protagonist:
         parts = req.protagonist.split(",", 1)
         protag_name = parts[0].strip()
         protag_desc = parts[1].strip()
     else:
         protag_name = req.protagonist
-        protag_desc = "un personaje amable" # Fallback
+        protag_desc = "un personaje amable y curioso"
 
-    # 2. Construir el prompt de la historia (SOLO TEXTO)
-    # Usamos un prompt simplificado para evitar contaminación visual
+    # 2. Obtener descripciones detalladas de los mappings
+    # Si no existe la key, usamos el valor raw como fallback (aunque no debería pasar)
+    topic_description = TOPIC_PROMPTS.get(req.scientific_topic, req.scientific_topic)
+    mission_description = MISSION_PROMPTS.get(req.mission, req.mission)
+    visual_style_description = VISUAL_STYLE_PROMPTS.get(req.visual_style, req.visual_style)
+
+    # 3. Construir el prompt de la historia (SOLO TEXTO)
     story_prompt = (
-        f"Escribe un cuento infantil educativo para niños de {req.age_group} años. "
-        f"El protagonista se llama {protag_name}. "
-        f"El tema científico es {req.scientific_topic} y la misión es {req.mission}. "
-        f"El cuento debe ser divertido, fácil de leer y enseñar los conceptos de {req.scientific_topic}."
+        f"Eres un experto escritor de cuentos infantiles. Escribe un cuento educativo para niños de {req.age_group} años.\n\n"
+        f"DATOS PRINCIPALES:\n"
+        f"- Protagonista: {protag_name}.\n"
+        f"- Tema Científico: {topic_description}\n"
+        f"- Trama/Misión: {mission_description}\n\n"
+        f"ESTRUCTURA OBLIGATORIA:\n"
+        f"1. Título: Creativo y relacionado con la misión.\n"
+        f"2. Capítulos: Divide la historia en 3-5 capítulos cortos.\n"
+        f"3. Contenido: El tono debe ser divertido, seguro y fácil de leer. "
+        f"Asegúrate de explicar el concepto científico de forma natural dentro de la narrativa.\n"
+        f"Devuelve SOLO el JSON con el formato establecido."
     )
 
-    # 3. Construir el contexto visual (SOLO IMAGENES)
+    # 4. Construir el contexto visual (SOLO IMAGENES)
     image_style_context = (
-        f"CHARACTER VISUALS: {protag_name} is {protag_desc}.\n"
-        f"VISUAL STYLE: {req.visual_style}."
+        f"CHARACTER DESIGN:\n"
+        f"- Name: {protag_name}\n"
+        f"- Description: {protag_desc}\n\n"
+        f"ARTISTIC DIRECTION (Must follow strictly):\n"
+        f"{visual_style_description}\n\n"
+        f"TARGET AUDIENCE: Children {req.age_group} years old (keep it age-appropriate, safe, and engaging)."
     )
 
-    logger.info(f"Story Prompt: {story_prompt}")
-    logger.info(f"Visual Context: {image_style_context}")
+    logger.info(f"Generated Rich Story Prompt: {story_prompt[:100]}...")
 
-    # 4. Encolar la tarea
+    # 5. Encolar la tarea
     try:
         task = generate_story_task.delay(
-            topic=story_prompt,  # Prompt para el texto
+            topic=story_prompt,
             user_id=str(user.id),
             jwt_token=user.token,
             model=None,
-            image_style_context=image_style_context # Contexto para imágenes
+            image_style_context=image_style_context
         )
         return {"task_id": task.id, "status": "processing"}
     except Exception as e:
