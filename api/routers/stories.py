@@ -151,40 +151,53 @@ class GuidedStoryRequest(BaseModel):
     mission: str
     visual_style: str
 
+from api.prompts.guided_story_prompts import GUIDED_PROMPTS
+
 @router.post("/generate_guided_story_async")
 async def generate_guided_story_async(req: GuidedStoryRequest, user: UserProfile = Depends(get_user_with_credits)):
     """
-    Endpoint para generar un cuento guiado.
-    De momento devuelve un placeholder síncrono para probar la integración.
+    Endpoint para generar un cuento guiado asíncrono.
+    Configura el prompt basado en las opciones seleccionadas y encola la tarea.
     """
     logger.info(f"Generating guided story for user {user.id} with params: {req}")
 
-    # TODO: Implementar la logica real asincrona o con LangGraph
+    # 1. Obtener el prompt base para la misión seleccionada
+    base_prompt = GUIDED_PROMPTS.get(req.mission)
     
-    # Placeholder story
-    placeholder_story = {
-        "title": f"The {req.protagonist}'s Mission: {req.mission}",
-        "chapters": [
-            {
-                "title": "Chapter 1: The Beginning",
-                "content": f"Once upon a time, there was a {req.protagonist} who lived in a world of {req.visual_style} style. They were {req.age_group} years old. One day, they decided to explore {req.scientific_topic}.",
-                "image_url": "https://placehold.co/600x400?text=Chapter+1"
-            },
-            {
-                "title": "Chapter 2: The Mission",
-                "content": f"Their mission was {req.mission}. It was a difficult task, but our hero was brave.",
-                 "image_url": "https://placehold.co/600x400?text=Chapter+2"
-            },
-            {
-                "title": "Chapter 3: Success",
-                "content": f"In the end, they learned all about {req.scientific_topic} and completed {req.mission}. The end.",
-                 "image_url": "https://placehold.co/600x400?text=Chapter+3"
-            }
-        ]
-    }
-    
-    # Simular descuento de crédito si fuera necesario, aunque por ser placeholder quizas no deberiamos?
-    # Para ser consistentes con el auth, dejemoslo comentado o activo según requerimiento.
-    # user_service.deduct_credit(user) # Descomentar si queremos cobrar creditos por el placeholder.
-    
-    return placeholder_story
+    if not base_prompt:
+        # Fallback genérico si la misión no está en el mapa (aunque el front debería garantizarlo)
+        logger.warning(f"Mission '{req.mission}' not found in GUIDED_PROMPTS. Using generic fallback.")
+        base_prompt = (
+            "Escribe un cuento infantil para niños de {age_group} años. "
+            "El protagonista es {protagonist}. "
+            "El tema es {scientific_topic} y la misión es {mission}. "
+            "El estilo visual debe ser {visual_style}."
+        )
+
+    # 2. Formatear el prompt con las variables del usuario
+    try:
+        final_prompt = base_prompt.format(
+            age_group=req.age_group,
+            visual_style=req.visual_style,
+            protagonist=req.protagonist,
+            scientific_topic=req.scientific_topic,
+            mission=req.mission
+        )
+    except KeyError as e:
+        logger.error(f"Error formatting prompt: Missing key {e}")
+        raise HTTPException(status_code=500, detail="Error constructing story prompt.")
+
+    logger.info(f"Constructed Guided Prompt: {final_prompt}")
+
+    # 3. Encolar la tarea (reutilizamos la tarea existente generate_story_task)
+    try:
+        task = generate_story_task.delay(
+            topic=final_prompt,  # Pasamos el prompt construido como "topic"
+            user_id=str(user.id),
+            jwt_token=user.token,
+            model=None # Usa el por defecto configurado en backend
+        )
+        return {"task_id": task.id, "status": "processing"}
+    except Exception as e:
+        logger.error("Error enqueuing guided task: %s", e, exc_info=True)
+        raise HTTPException(status_code=503, detail="Service busy or Redis error.")
