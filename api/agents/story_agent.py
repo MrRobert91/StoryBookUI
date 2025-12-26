@@ -42,15 +42,19 @@ image_llm = ChatGroq(
 )
 logger.info("image_llm ready")
 
-def make_image_prompt(text: str) -> str:
+def make_image_prompt(text: str, style_context: str = None) -> str:
     """Use LLM to create an image prompt for children's illustrations (non-realistic)."""
     try:
+        user_content = f"Story text:\n\n{text[:2000]}"
+        if style_context:
+            user_content = f"VISUAL STYLE/CHARACTER INSTRUCTIONS:\n{style_context}\n\n" + user_content
+
         response = image_llm.invoke([
             {
                 "role": "system",
                 "content": IMAGE_PROMPT_SYSTEM,
             },
-            {"role": "user", "content": f"Story text:\n\n{text[:2000]}"},
+            {"role": "user", "content": user_content},
         ])
         prompt = response.content.strip() if hasattr(response, "content") else str(response).strip()
         
@@ -109,6 +113,7 @@ def image_generation_node(state: StoryState):
     
     user_id = state.get("user_id")
     jwt_token = state.get("jwt_token")
+    image_style_context = state.get("image_style_context")
     
     if not user_id or not jwt_token:
         logger.error("user_id or jwt_token not provided in state")
@@ -131,7 +136,7 @@ def image_generation_node(state: StoryState):
     # Cover image
     logger.info("Generating cover image...")
     cover_text = f"Book cover for: {story.title}\n\nChapters: {', '.join(c.title for c in story.chapters)}"
-    cover_prompt = make_image_prompt(cover_text)
+    cover_prompt = make_image_prompt(cover_text, style_context=image_style_context)
     story.cover_image_url = generate_image(cover_prompt, image_type="cover", model=model)
     logger.info("Cover image URL (Supabase): %s", story.cover_image_url)
     
@@ -140,7 +145,7 @@ def image_generation_node(state: StoryState):
     for idx, chapter in enumerate(story.chapters, 1):
         logger.info(f"Chapter {idx}: {chapter.title}")
         chapter_text = f"{chapter.title}\n\n{chapter.content[:1500]}"
-        chapter_prompt = make_image_prompt(chapter_text)
+        chapter_prompt = make_image_prompt(chapter_text, style_context=image_style_context)
         chapter.image_url = generate_image(chapter_prompt, image_type="chapter", model=model)
         logger.info("Chapter %d image URL (Supabase): %s", idx, chapter.image_url)
     

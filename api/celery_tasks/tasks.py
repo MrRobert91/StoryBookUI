@@ -21,10 +21,10 @@ else:
     logger.warning("⚠️ SUPABASE CREDENTIALS NOT FOUND. Database operations will fail.")
 
 @celery_app.task(bind=True, name="generate_story_task")
-def generate_story_task(self, topic: str, user_id: str, jwt_token: str, model: str | None = None):
+def generate_story_task(self, topic: str, user_id: str, jwt_token: str, model: str | None = None, image_style_context: str | None = None):
     task_id = self.request.id
     logger.info(f" [Task {task_id}] RECEIVED by worker.")
-    logger.info(f" [Task {task_id}] INPUT -> User: {user_id} | Topic: '{topic}' | Model: {model}")
+    logger.info(f" [Task {task_id}] INPUT -> User: {user_id} | Topic: '{topic}' | Model: {model} | Style Context: {bool(image_style_context)}")
     
     try:
         # 1. Invocar Workflow
@@ -33,7 +33,8 @@ def generate_story_task(self, topic: str, user_id: str, jwt_token: str, model: s
             "messages": [{"role": "user", "content": topic}],
             "user_id": user_id,
             "jwt_token": jwt_token,
-            "model": model
+            "model": model,
+            "image_style_context": image_style_context
         })
         
         story_data = result.get("story_data")

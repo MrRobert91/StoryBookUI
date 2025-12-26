@@ -158,44 +158,46 @@ async def generate_guided_story_async(req: GuidedStoryRequest, user: UserProfile
     """
     Endpoint para generar un cuento guiado asíncrono.
     Configura el prompt basado en las opciones seleccionadas y encola la tarea.
+    Separa el prompt de la historia de los estilos visuales.
     """
     logger.info(f"Generating guided story for user {user.id} with params: {req}")
 
-    # 1. Obtener el prompt base para la misión seleccionada
-    base_prompt = GUIDED_PROMPTS.get(req.mission)
-    
-    if not base_prompt:
-        # Fallback genérico si la misión no está en el mapa (aunque el front debería garantizarlo)
-        logger.warning(f"Mission '{req.mission}' not found in GUIDED_PROMPTS. Using generic fallback.")
-        base_prompt = (
-            "Escribe un cuento infantil para niños de {age_group} años. "
-            "El protagonista es {protagonist}. "
-            "El tema es {scientific_topic} y la misión es {mission}. "
-            "El estilo visual debe ser {visual_style}."
-        )
+    # 1. Parsear el protagonista (Nombre, Descripción)
+    # Esperamos que venga como "Nombre, Descripción"
+    if "," in req.protagonist:
+        parts = req.protagonist.split(",", 1)
+        protag_name = parts[0].strip()
+        protag_desc = parts[1].strip()
+    else:
+        protag_name = req.protagonist
+        protag_desc = "un personaje amable" # Fallback
 
-    # 2. Formatear el prompt con las variables del usuario
-    try:
-        final_prompt = base_prompt.format(
-            age_group=req.age_group,
-            visual_style=req.visual_style,
-            protagonist=req.protagonist,
-            scientific_topic=req.scientific_topic,
-            mission=req.mission
-        )
-    except KeyError as e:
-        logger.error(f"Error formatting prompt: Missing key {e}")
-        raise HTTPException(status_code=500, detail="Error constructing story prompt.")
+    # 2. Construir el prompt de la historia (SOLO TEXTO)
+    # Usamos un prompt simplificado para evitar contaminación visual
+    story_prompt = (
+        f"Escribe un cuento infantil educativo para niños de {req.age_group} años. "
+        f"El protagonista se llama {protag_name}. "
+        f"El tema científico es {req.scientific_topic} y la misión es {req.mission}. "
+        f"El cuento debe ser divertido, fácil de leer y enseñar los conceptos de {req.scientific_topic}."
+    )
 
-    logger.info(f"Constructed Guided Prompt: {final_prompt}")
+    # 3. Construir el contexto visual (SOLO IMAGENES)
+    image_style_context = (
+        f"CHARACTER VISUALS: {protag_name} is {protag_desc}.\n"
+        f"VISUAL STYLE: {req.visual_style}."
+    )
 
-    # 3. Encolar la tarea (reutilizamos la tarea existente generate_story_task)
+    logger.info(f"Story Prompt: {story_prompt}")
+    logger.info(f"Visual Context: {image_style_context}")
+
+    # 4. Encolar la tarea
     try:
         task = generate_story_task.delay(
-            topic=final_prompt,  # Pasamos el prompt construido como "topic"
+            topic=story_prompt,  # Prompt para el texto
             user_id=str(user.id),
             jwt_token=user.token,
-            model=None # Usa el por defecto configurado en backend
+            model=None,
+            image_style_context=image_style_context # Contexto para imágenes
         )
         return {"task_id": task.id, "status": "processing"}
     except Exception as e:

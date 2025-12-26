@@ -141,6 +141,7 @@ class StoryState(TypedDict):
     user_id: str | None
     jwt_token: str | None
     model: str | None
+    image_style_context: str | None
 
 # ============================================================================
 # IMAGE GENERATION LOGIC
