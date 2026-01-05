@@ -170,7 +170,7 @@ export const storyOperations = {
       // Get paginated public stories
       const { data, error } = await client
         .from("stories")
-        .select("*, profiles(username)")
+        .select("*")
         .eq("visibility", "public")
         .order("created_at", { ascending: false })
         .range(offset, offset + limit - 1)
@@ -180,13 +180,38 @@ export const storyOperations = {
         throw error
       }
 
-      console.log("Fetched stories:", data?.length || 0)
+      let stories = data || []
+
+      // Manual join with profiles to avoid 400 error if FK is missing
+      if (stories.length > 0) {
+        const userIds = [...new Set(stories.map(s => s.user_id))]
+
+        try {
+          const { data: profiles, error: profilesError } = await client
+            .from("profiles")
+            .select("id, username")
+            .in("id", userIds)
+
+          if (!profilesError && profiles) {
+            const profileMap = new Map(profiles.map(p => [p.id, p]))
+
+            stories = stories.map(story => ({
+              ...story,
+              profiles: profileMap.get(story.user_id) || { username: "Anonymous" }
+            }))
+          }
+        } catch (e) {
+          console.warn("Error fetching profiles for stories:", e)
+        }
+      }
+
+      console.log("Fetched stories:", stories.length)
 
       const totalCount = count || 0
       const totalPages = Math.ceil(totalCount / limit)
 
       const result: PaginatedStoriesResult = {
-        stories: data || [],
+        stories: stories,
         totalCount,
         totalPages,
         currentPage: page,
