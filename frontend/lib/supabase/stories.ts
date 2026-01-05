@@ -248,13 +248,90 @@ export const storyOperations = {
     }
   },
 
-  // Delete a story
+  // Delete a story and its associated images
   async deleteStory(storyId: string): Promise<{ error: any }> {
     if (!supabase) {
       return { error: new Error("Supabase not configured") }
     }
 
     try {
+      // 1. Fetch story content to find associated images
+      const { data: story, error: fetchError } = await supabase
+        .from("stories")
+        .select("content")
+        .eq("id", storyId)
+        .single()
+
+      if (fetchError) {
+        console.error("Error fetching story for deletion:", fetchError)
+        // Proceed to try delete anyway if fetch fails? simpler to just return error
+        return { error: fetchError }
+      }
+
+      // 2. Extract and delete images if they exist
+      if (story?.content) {
+        try {
+          let content = story.content
+          // Parse if string
+          if (typeof content === "string") {
+            try {
+              content = JSON.parse(content)
+              if (typeof content === "string") {
+                content = JSON.parse(content)
+              }
+            } catch (e) {
+              content = {}
+            }
+          }
+
+          const bucketName = "cuentee_images"
+          const filesToDelete: string[] = []
+
+          // Helper to extract file path from URL
+          const getFilePath = (url: string) => {
+            if (!url || !url.includes(`/${bucketName}/`)) return null
+            const parts = url.split(`/${bucketName}/`)
+            return parts.length > 1 ? parts[1] : null
+          }
+
+          // A. Cover Image
+          if (content?.cover_image_url) {
+            const path = getFilePath(content.cover_image_url)
+            if (path) filesToDelete.push(path)
+          }
+
+          // B. Chapter Images
+          if (Array.isArray(content?.chapters)) {
+            content.chapters.forEach((chapter: any) => {
+              if (chapter?.image_url) {
+                const path = getFilePath(chapter.image_url)
+                if (path) filesToDelete.push(path)
+              }
+            })
+          }
+
+          // C. Batch Delete
+          if (filesToDelete.length > 0) {
+            console.log("Deleting images from storage:", filesToDelete)
+
+            const { error: storageError } = await supabase
+              .storage
+              .from(bucketName)
+              .remove(filesToDelete)
+
+            if (storageError) {
+              console.error("Error deleting images from storage:", storageError)
+            } else {
+              console.log(`Successfully deleted ${filesToDelete.length} images`)
+            }
+          }
+
+        } catch (parseError) {
+          console.error("Error parsing story content for image deletion:", parseError)
+        }
+      }
+
+      // 3. Delete the story record
       const { error } = await supabase.from("stories").delete().eq("id", storyId)
 
       return { error }

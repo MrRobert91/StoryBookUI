@@ -190,6 +190,13 @@ class SupabaseClientWrapper {
       },
     }
   }
+
+  get storage() {
+    if (!this.client) {
+      throw new Error("Supabase client not initialized")
+    }
+    return this.client.storage
+  }
 }
 
 // Create the Supabase client with enhanced error handling
