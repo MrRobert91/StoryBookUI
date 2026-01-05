@@ -40,7 +40,9 @@ export default function StoryModal({ story, onClose, onDelete }: StoryModalProps
         <div className="flex justify-between items-center p-6 border-b shrink-0">
           <div>
             <h2 className="text-2xl font-bold text-gray-900">{story.title}</h2>
-            <p className="text-gray-600 text-sm mt-1">Created on {formatDate(story.created_at)}</p>
+            <p className="text-gray-600 text-sm mt-1">
+              Created by <span className="font-medium text-purple-700">{story.profiles?.username || "Anonymous"}</span> on {formatDate(story.created_at)}
+            </p>
             {story.prompt && (
               <p className="text-purple-600 text-sm mt-2">
                 <strong>Original Prompt:</strong> {story.prompt}

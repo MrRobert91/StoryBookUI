@@ -9,6 +9,9 @@ export interface Story {
   visibility: "public" | "private"
   created_at: string
   updated_at: string
+  profiles?: {
+    username: string
+  }
 }
 
 export interface Chapter {
@@ -167,7 +170,7 @@ export const storyOperations = {
       // Get paginated public stories
       const { data, error } = await client
         .from("stories")
-        .select("*")
+        .select("*, profiles(username)")
         .eq("visibility", "public")
         .order("created_at", { ascending: false })
         .range(offset, offset + limit - 1)

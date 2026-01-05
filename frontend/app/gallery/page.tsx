@@ -181,7 +181,7 @@ export default function GalleryPage() {
                       </div>
                       <div className="flex items-center gap-1">
                         <User className="h-3 w-3" />
-                        Anonymous
+                        {story.profiles?.username || "Anonymous"}
                       </div>
                     </div>
                   </CardHeader>
