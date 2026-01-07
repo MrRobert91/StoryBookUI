@@ -11,9 +11,12 @@ const geist = Geist({
 })
 
 export const metadata: Metadata = {
-  title: "Supabase Auth with SSR",
-  description: "A Next.js application with Supabase authentication using SSR",
-  generator: 'v0.dev'
+  title: "Cuentee - Create Magical Stories",
+  description: "A magical platform to create and share children's stories powered by AI",
+  generator: 'v0.dev',
+  icons: {
+    icon: "/favicon.png",
+  },
 }
 
 export default async function RootLayout({
