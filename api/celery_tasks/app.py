@@ -54,4 +54,5 @@ celery_app.conf.update(
     result_backend_transport_options={"max_connections": 2},
     broker_connection_retry_on_startup=True,
     broker_transport_options={"max_connections": 2},
+    worker_max_tasks_per_child=50, # Recycle worker after 50 tasks to release memory
 )

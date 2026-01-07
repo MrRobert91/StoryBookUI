@@ -36,30 +36,42 @@ STORAGE_BUCKET_NAME = os.getenv("STORAGE_BUCKET_NAME", "cuentee_images")
 if not SUPABASE_ANON_KEY:
     raise EnvironmentError("SUPABASE_ANON_KEY not found. Set it in your .env file.")
 
-# Variable global para almacenar el contexto del usuario actual
+# Global variable para almacenar el contexto del usuario actual y cliente S3 cacheado
 _current_jwt_token = None
 _current_user_id = None
 _current_story_id = None
+_cached_s3_client = None
+_cached_client_token = None
 
 def set_user_context(user_id: str, jwt_token: str, story_id: str = None):
-    """Set user context for S3 uploads"""
-    global _current_jwt_token, _current_user_id, _current_story_id
+    """Set user context for S3 uploads and reset cache if token changes"""
+    global _current_jwt_token, _current_user_id, _current_story_id, _cached_s3_client, _cached_client_token
+    
+    if _current_jwt_token != jwt_token:
+        _cached_s3_client = None # Invalidate cache if token changes
+        
     _current_jwt_token = jwt_token
     _current_user_id = user_id
     _current_story_id = story_id or str(uuid.uuid4())
     logger.info(f"User context set: user_id={user_id}, story_id={_current_story_id}")
 
 def get_s3_client():
-    """Create S3 client authenticated with user's JWT token."""
+    """Create or retrieve S3 client authenticated with user's JWT token."""
+    global _cached_s3_client, _cached_client_token
+    
     if not SUPABASE_ANON_KEY:
         raise EnvironmentError("SUPABASE_ANON_KEY not configured")
     
     if not _current_jwt_token:
         raise EnvironmentError("JWT token not set. Call set_user_context() first.")
     
-    logger.info(f"Creating S3 client for user: {_current_user_id}")
+    # Return cached client if token hasn't changed
+    if _cached_s3_client and _cached_client_token == _current_jwt_token:
+        return _cached_s3_client
     
-    return boto3.client(
+    logger.info(f"Creating new S3 client for user: {_current_user_id}")
+    
+    _cached_s3_client = boto3.client(
         's3',
         endpoint_url=SUPABASE_S3_ENDPOINT,
         aws_access_key_id=SUPABASE_PROJECT_REF,
@@ -68,6 +80,9 @@ def get_s3_client():
         region_name=SUPABASE_S3_REGION,
         config=Config(signature_version='s3v4')
     )
+    _cached_client_token = _current_jwt_token
+    
+    return _cached_s3_client
 
 def upload_image_bytes_to_supabase(image_data: bytes, image_type: str) -> str:
     """Upload raw image bytes to Supabase Storage."""

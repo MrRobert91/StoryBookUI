@@ -24,10 +24,12 @@ WORKDIR /app
 
 ENV NODE_ENV=production
 
-COPY --from=builder /app/.next ./.next
-COPY --from=builder /app/node_modules ./node_modules
-COPY --from=builder /app/package.json ./package.json
 COPY --from=builder /app/public ./public
+
+# Automatically leverage output traces to reduce image size
+# https://nextjs.org/docs/advanced-features/output-file-tracing
+COPY --from=builder /app/.next/standalone ./
+COPY --from=builder /app/.next/static ./.next/static
 
 # Instalar su-exec para manejar permisos
 RUN apk add --no-cache su-exec
@@ -55,4 +57,4 @@ HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \
 
 # Ejecutar script como root (él cambiará a nextjs internamente)
 ENTRYPOINT ["/app/entrypoint.sh"]
-CMD ["node_modules/.bin/next", "start"]
+CMD ["node", "server.js"]
