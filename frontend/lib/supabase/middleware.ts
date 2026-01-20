@@ -1,36 +1,47 @@
-import { createMiddlewareClient } from "@supabase/auth-helpers-nextjs"
+import { createServerClient, type CookieOptions } from "@supabase/ssr"
 import { NextResponse, type NextRequest } from "next/server"
 
-// Check if Supabase environment variables are available
 export const isSupabaseConfigured =
-  typeof process.env.NEXT_PUBLIC_SUPABASE_URL === "string" &&
-  process.env.NEXT_PUBLIC_SUPABASE_URL.length > 0 &&
-  typeof process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY === "string" &&
-  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY.length > 0
+  !!process.env.NEXT_PUBLIC_SUPABASE_URL &&
+  !!process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
 
 export async function updateSession(request: NextRequest) {
-  // If Supabase is not configured, just continue without auth
   if (!isSupabaseConfigured) {
     return NextResponse.next({ request })
   }
 
-  const res = NextResponse.next()
+  let supabaseResponse = NextResponse.next({
+    request,
+  })
 
-  try {
-    // Create a Supabase client configured to use cookies
-    const supabase = createMiddlewareClient({ req: request, res })
+  const supabase = createServerClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+    {
+      cookies: {
+        getAll() {
+          return request.cookies.getAll()
+        },
+        setAll(cookiesToSet) {
+          cookiesToSet.forEach(({ name, value, options }) => request.cookies.set(name, value))
+          supabaseResponse = NextResponse.next({
+            request,
+          })
+          cookiesToSet.forEach(({ name, value, options }) =>
+            supabaseResponse.cookies.set(name, value, options)
+          )
+        },
+      },
+    }
+  )
 
-    // Check if this is an auth callback
-    // We let the route handler deal with the code exchange to avoid conflicts
-    // and ensuring proper cookie handling in the callback route.
+  // IMPORTANT: Avoid writing any logic between createServerClient and
+  // supabase.auth.getUser(). A simple mistake can make it very hard to debug
+  // issues with sessions being lost.
 
-    // For client-side routing, we don't need to protect routes in middleware
+  const {
+    data: { user },
+  } = await supabase.auth.getUser()
 
-    // For client-side routing, we don't need to protect routes in middleware
-    // The client components will handle authentication checks
-    return res
-  } catch (error) {
-    console.warn("Middleware error:", error)
-    return NextResponse.next({ request })
-  }
+  return supabaseResponse
 }

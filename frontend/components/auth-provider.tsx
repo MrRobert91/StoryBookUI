@@ -2,7 +2,6 @@
 
 import { createContext, useContext, useEffect, useState, type ReactNode } from "react"
 import { supabase, isSupabaseConfigured } from "@/lib/supabase/client"
-// No importamos useRouter aquí, el AuthProvider solo gestiona el estado, no las redirecciones
 
 interface AuthContextType {
   session: any
@@ -71,15 +70,12 @@ export function AuthProvider({ children, initialSession = null }: AuthProviderPr
       console.log("Auth state changed:", event, session?.user?.email)
       setSession(session)
       setLoading(false)
-
-      // El AuthProvider solo actualiza el estado, no redirige.
-      // Las redirecciones se manejan en los componentes de formulario o páginas protegidas.
     })
 
     return () => {
       subscription?.unsubscribe()
     }
-  }, [initialSession]) // Dependencias ajustadas
+  }, [initialSession])
 
   const value = {
     session,
