@@ -25,16 +25,9 @@ export default async function RootLayout({
   children: React.ReactNode
 }) {
   // Get initial session for AuthProvider
-  let initialSession = null
-  if (isSupabaseConfigured) {
-    try {
-      const supabase = await createClient()
-      const { data } = await supabase.auth.getSession()
-      initialSession = data.session
-    } catch (error) {
-      console.warn("Error getting initial session:", error)
-    }
-  }
+  // We don't fetch on the server to avoid the "Using the user object..." warning
+  // and to reduce the number of requests. The AuthProvider will hydrate the session on the client.
+  const initialSession = null
 
   return (
     <html lang="en">
