@@ -14,6 +14,12 @@ export async function updateSession(request: NextRequest) {
     request,
   })
 
+  // Skip middleware for auth routes to prevent rate limiting loop
+  // The callback handler and login pages don't need this causing a re-fetch
+  if (request.nextUrl.pathname.startsWith('/auth')) {
+    return supabaseResponse
+  }
+
   const supabase = createServerClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
