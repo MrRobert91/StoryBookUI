@@ -32,7 +32,8 @@ export async function GET(request: NextRequest) {
     try {
       const { error } = await supabase.auth.exchangeCodeForSession(code)
       if (!error) {
-        return NextResponse.redirect(`${origin}/auth/confirmed`)
+        const next = requestUrl.searchParams.get("next")
+        return NextResponse.redirect(`${origin}${next || "/"}`)
       }
       console.error("Auth exchange error:", error)
     } catch (error) {
