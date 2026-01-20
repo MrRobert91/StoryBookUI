@@ -1,7 +1,7 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   output: 'standalone',
-  serverExternalPackages: ['@supabase/auth-helpers-nextjs'],
+
   eslint: {
     ignoreDuringBuilds: true,
   },
