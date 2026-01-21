@@ -3,7 +3,6 @@ import type { Metadata } from "next"
 import { Geist } from "next/font/google"
 import "./globals.css"
 import { AuthProvider } from "@/components/auth-provider"
-import { createClient, isSupabaseConfigured } from "@/lib/supabase/server"
 import { Footer } from "@/components/footer"
 
 const geist = Geist({
