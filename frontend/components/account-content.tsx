@@ -236,8 +236,9 @@ export default function AccountContent({ user }: AccountContentProps) {
     }
   }
 
-  const truncateContent = (content: string) => {
-    return content.substring(0, 100) + "..."
+  const truncateContent = (content: string, maxLength = 100) => {
+    if (content.length <= maxLength) return content
+    return content.substring(0, maxLength) + "..."
   }
 
   if (loading) {
@@ -406,11 +407,11 @@ export default function AccountContent({ user }: AccountContentProps) {
                       </h3>
                       <div className="flex items-center space-x-2 ml-2">
                         {/* Visibility indicator */}
-                        <div className="flex items-center">
+                        <div className="flex items-center" title={story.visibility === "public" ? "Public" : "Private"}>
                           {story.visibility === "public" ? (
-                            <Globe className="h-4 w-4 text-green-600" title="Public" />
+                            <Globe className="h-4 w-4 text-green-600" />
                           ) : (
-                            <Lock className="h-4 w-4 text-gray-600" title="Private" />
+                            <Lock className="h-4 w-4 text-gray-600" />
                           )}
                         </div>
                         {/* Visibility toggle button */}
@@ -438,7 +439,11 @@ export default function AccountContent({ user }: AccountContentProps) {
                         />
                       </div>
                     )}
-                    {story.prompt && <p className="text-xs text-purple-600 mb-2 italic">"{story.prompt}"</p>}
+                    {story.prompt && (
+                      <p className="text-xs text-purple-600 mb-2 italic">
+                        "{truncateContent(story.prompt, 80)}"
+                      </p>
+                    )}
                     <p className="text-sm text-gray-600 mb-3 line-clamp-2">
                       {typeof story.content === "string"
                         ? truncateContent(getStoryPreview(story.content))

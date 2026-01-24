@@ -2,7 +2,8 @@
 
 import type React from "react"
 
-import { X, Trash2 } from "lucide-react"
+import { useState } from "react"
+import { X, Trash2, ChevronDown, ChevronUp } from "lucide-react"
 import type { Story } from "@/lib/supabase/stories"
 import MarkdownRenderer from "./markdown-renderer"
 
@@ -13,6 +14,8 @@ interface StoryModalProps {
 }
 
 export default function StoryModal({ story, onClose, onDelete }: StoryModalProps) {
+  const [isPromptExpanded, setIsPromptExpanded] = useState(false)
+
   const formatDate = (dateString: string) => {
     return new Date(dateString).toLocaleDateString("en-US", {
       year: "numeric",
@@ -38,18 +41,30 @@ export default function StoryModal({ story, onClose, onDelete }: StoryModalProps
       <div className="bg-white rounded-lg max-w-4xl w-full max-h-[90vh] flex flex-col overflow-hidden">
         {/* Header */}
         <div className="flex justify-between items-center p-6 border-b shrink-0">
-          <div>
+          <div className="flex-1 mr-4">
             <h2 className="text-2xl font-bold text-gray-900">{story.title}</h2>
             <p className="text-gray-600 text-sm mt-1">
               Created by <span className="font-medium text-purple-700">{story.profiles?.username || "Anonymous"}</span> on {formatDate(story.created_at)}
             </p>
             {story.prompt && (
-              <p className="text-purple-600 text-sm mt-2">
-                <strong>Original Prompt:</strong> {story.prompt}
-              </p>
+              <div className="mt-2">
+                <button
+                  onClick={() => setIsPromptExpanded(!isPromptExpanded)}
+                  className="flex items-center gap-1 text-sm font-medium text-gray-900 hover:text-purple-600 transition-colors"
+                >
+                  Original Prompt
+                  {isPromptExpanded ? <ChevronUp className="h-3 w-3" /> : <ChevronDown className="h-3 w-3" />}
+                </button>
+                <div
+                  className={`text-purple-600 text-sm mt-1 transition-all duration-200 ${isPromptExpanded ? "" : "line-clamp-1"
+                    }`}
+                >
+                  {story.prompt}
+                </div>
+              </div>
             )}
           </div>
-          <button onClick={onClose} className="p-2 hover:bg-gray-100 rounded-full transition-colors">
+          <button onClick={onClose} className="p-2 hover:bg-gray-100 rounded-full transition-colors self-start">
             <X className="h-6 w-6 text-gray-500" />
           </button>
         </div>
