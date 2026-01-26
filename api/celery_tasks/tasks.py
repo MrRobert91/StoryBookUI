@@ -52,6 +52,45 @@ def generate_story_task(self, topic: str, user_id: str, jwt_token: str, model: s
         logger.info(f" [Task {task_id}] GENERATION SUCCESS -> Title: '{title}' | Chapters: {len(chapters)}")
         logger.info(f" [Task {task_id}] Story Preview: {json.dumps(story_json, indent=2)[:500]}...") # Muestra los primeros 500 caracteres
         
+        # 2b. Generar PDF y subir a Supabase
+        pdf_url = None
+        try:
+            from api.services.pdf_service import generate_story_pdf
+            logger.info(f" [Task {task_id}] Generando PDF del cuento...")
+            pdf_bytes = generate_story_pdf(story_json)
+            
+            pdf_filename = f"{user_id}/{task_id}.pdf"
+            bucket_name = "cuentee_pdfs"
+
+            if supabase_admin:
+                logger.info(f" [Task {task_id}] Subiendo PDF a bucket '{bucket_name}' como '{pdf_filename}'...")
+                
+                # Upload
+                # Note: 'upsert' option might be needed if overwriting, but task_id is unique enough.
+                # In python supabase client, storage.from_().upload() takes file bytes.
+                res = supabase_admin.storage.from_(bucket_name).upload(
+                    path=pdf_filename,
+                    file=pdf_bytes,
+                    file_options={"content-type": "application/pdf", "upsert": "true"}
+                )
+                
+                # Get Public URL
+                # Assuming bucket is public. If private, we'd need create_signed_url every time or just store path.
+                # For this implementation, we try to get public URL.
+                public_url_resp = supabase_admin.storage.from_(bucket_name).get_public_url(pdf_filename)
+                pdf_url = public_url_resp
+                
+                logger.info(f" [Task {task_id}] PDF subido exitosamente. URL: {pdf_url}")
+                
+                # Add to story structure to be saved in DB
+                story_json["pdf_url"] = pdf_url
+            else:
+                logger.warning(f" [Task {task_id}] No se pudo subir PDF (Supabase client missing).")
+
+        except Exception as pdf_err:
+            logger.error(f" [Task {task_id}] ERROR Generando/Subiendo PDF: {pdf_err}", exc_info=True)
+            # No fallamos la tarea entera si solo falla el PDF, pero lo logueamos.
+
         # 2. Guardar en Base de Datos
         if supabase_admin:
             logger.info(f"💾 [Task {task_id}] Saving to Supabase 'stories' table...")
@@ -90,7 +129,7 @@ def generate_story_task(self, topic: str, user_id: str, jwt_token: str, model: s
         else:
             logger.error(f" [Task {task_id}] Skipping DB save (Supabase client not initialized)")
         
-        logger.info(f"🏁 [Task {task_id}] FINISHED successfully.")
+        logger.info(f"🏁 [Task {task_id}] FINISHED successfully. PDF URL: {pdf_url}")
         return story_json
         
     except Exception as e:

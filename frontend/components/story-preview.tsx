@@ -77,3 +77,34 @@ export function getCoverImage(content: string | any): string | null {
     return null
   }
 }
+
+export function getPdfUrl(content: string | any): string | null {
+  if (!content) return null
+
+  try {
+    // If it's already an object (Supabase JSONB handling)
+    if (typeof content === 'object') {
+      return content.pdf_url || null
+    }
+
+    // If it's a string, verify it's not a double-encoded string or just parse it
+    const parsed = JSON.parse(content)
+
+    // Sometimes double parsing is needed if it was stringified twice
+    if (typeof parsed === 'string') {
+      try {
+        const doubleParsed = JSON.parse(parsed)
+        if (typeof doubleParsed === 'object') {
+          return doubleParsed.pdf_url || null
+        }
+      } catch {
+        return null
+      }
+    }
+
+    return parsed.pdf_url || null
+  } catch (e) {
+    // console.error("Error parsing pdf url from content:", e)
+    return null
+  }
+}

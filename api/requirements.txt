@@ -17,3 +17,4 @@ celery[redis]
 redis
 pytest
 asgiref
+fpdf2

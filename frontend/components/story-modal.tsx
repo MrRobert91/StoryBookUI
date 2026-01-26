@@ -3,9 +3,10 @@
 import type React from "react"
 
 import { useState } from "react"
-import { X, Trash2, ChevronDown, ChevronUp } from "lucide-react"
+import { X, Trash2, ChevronDown, ChevronUp, Download } from "lucide-react"
 import type { Story } from "@/lib/supabase/stories"
 import MarkdownRenderer from "./markdown-renderer"
+import { getPdfUrl } from "./story-preview"
 
 interface StoryModalProps {
   story: Story
@@ -97,15 +98,27 @@ export default function StoryModal({ story, onClose, onDelete }: StoryModalProps
               Delete Story
             </button>
           )}
-          <button
-            onClick={() => {
-              navigator.clipboard.writeText(story.content)
-              alert("Story copied to clipboard!")
-            }}
-            className="px-4 py-2 bg-purple-600 text-white rounded-md hover:bg-purple-700 transition-colors"
-          >
-            Copy Story
-          </button>
+          {getPdfUrl(story.content) ? (
+            <a
+              href={getPdfUrl(story.content)!}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="px-4 py-2 bg-purple-600 text-white rounded-md hover:bg-purple-700 transition-colors flex items-center gap-2"
+            >
+              <Download className="h-4 w-4" />
+              Download PDF
+            </a>
+          ) : (
+            <button
+              onClick={() => {
+                navigator.clipboard.writeText(typeof story.content === 'string' ? story.content : JSON.stringify(story.content))
+                alert("Story copied to clipboard! (PDF not available for this story)")
+              }}
+              className="px-4 py-2 bg-gray-200 text-gray-700 rounded-md hover:bg-gray-300 transition-colors"
+            >
+              Copy Story
+            </button>
+          )}
         </div>
       </div>
     </div>
