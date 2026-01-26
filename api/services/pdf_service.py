@@ -3,22 +3,26 @@ import io
 
 class StoryPDF(FPDF):
     def header(self):
-        # Header is left empty or minimal as requested? 
-        # User said "En vez de storybook, deberia poner made by cuentee.com en morado"
-        # Since "StoryBook" was in the header, we'll put the new text there.
-        self.set_font('Arial', 'I', 10)
+        # Branding Header
+        self.set_font('Helvetica', 'I', 10)
         self.set_text_color(128, 0, 128) # Purple
-        # Move to right
         self.cell(0, 10, 'made by cuentee.com', 0, 0, 'R', link='https://www.cuentee.com/')
-        self.ln(20)
-        # Reset color
+        self.ln(15)
+        # Decorative line
+        self.set_draw_color(200, 200, 200)
+        self.line(10, 15, 200, 15)
         self.set_text_color(0, 0, 0)
 
     def footer(self):
-        self.set_y(-15)
-        self.set_font('Arial', 'I', 8)
+        self.set_y(-20)
+        # Decorative line
+        self.set_draw_color(200, 200, 200)
+        self.line(10, self.get_y(), 200, self.get_y())
+        self.ln(2)
+        
+        self.set_font('Helvetica', 'I', 10)
         self.set_text_color(128, 128, 128)
-        self.cell(0, 10, 'Page ' + str(self.page_no()) + '/{nb}', 0, 0, 'C')
+        self.cell(0, 10, f'Page {self.page_no()} / {{nb}}', 0, 0, 'C')
 
 import requests
 
@@ -26,19 +30,35 @@ def generate_story_pdf(story_data: dict) -> bytes:
     """
     Generates a PDF from the story data.
     """
+    # Initialize PDF
     pdf = StoryPDF()
+    pdf.set_auto_page_break(auto=True, margin=20)
     pdf.alias_nb_pages()
     pdf.add_page()
     
     # --- PAGE 1: Title and Cover Only ---
     
-    # Story Title
+    # Title Styling
     title = story_data.get("title", "Untitled Story")
-    pdf.set_font('Arial', 'B', 24)
-    # Give some top margin
-    pdf.ln(20) 
-    pdf.multi_cell(0, 10, title, align='C')
-    pdf.ln(10)
+    pdf.set_font('Helvetica', 'B', 28)
+    pdf.set_text_color(50, 50, 50)
+    
+    # Calculate height for vertical centering of cover page elements roughly
+    pdf.ln(30)
+    
+    # Title with Border
+    # MultiCell with border is tricky for centering text inside, 
+    # but 'border=1' draws a box around the cell block.
+    # Let's adjust color for the border
+    pdf.set_draw_color(100, 0, 100) # Dark Purple border
+    pdf.set_line_width(1)
+    
+    # We use a Cell for single line title or MultiCell if it wraps. 
+    # To look like a "plaque", we can use background fill or just border.
+    # Let's use a nice padding effect by drawing a cell.
+    pdf.multi_cell(0, 20, title, border=1, align='C')
+    pdf.set_line_width(0.2) # Reset
+    pdf.ln(20)
 
     # Cover Image
     cover_url = story_data.get("cover_image_url")
@@ -47,9 +67,9 @@ def generate_story_pdf(story_data: dict) -> bytes:
             response = requests.get(cover_url, timeout=10)
             if response.status_code == 200:
                 img_data = io.BytesIO(response.content)
-                # Center, larger
-                x_pos = (210 - 120) / 2
-                pdf.image(img_data, x=x_pos, w=120)
+                # Larger cover image
+                x_pos = (210 - 140) / 2
+                pdf.image(img_data, x=x_pos, w=140)
         except Exception as e:
             print(f"Error embedding cover image: {e}")
             
@@ -69,10 +89,13 @@ def generate_story_pdf(story_data: dict) -> bytes:
             chap_text = chapter.get("content") or chapter.get("text", "")
             chap_image_url = chapter.get("image_url")
             
+            # Chapter Title
             if chap_title:
-                pdf.set_font('Arial', 'B', 18)
-                pdf.cell(0, 10, chap_title, 0, 1, 'L')
+                pdf.set_font('Helvetica', 'B', 22)
+                pdf.set_text_color(80, 0, 80) # Dark Purple
+                pdf.cell(0, 15, chap_title, 0, 1, 'C') # Centered chapter title
                 pdf.ln(10)
+                pdf.set_text_color(0, 0, 0)
             
             # Chapter Image
             if chap_image_url:
@@ -81,14 +104,22 @@ def generate_story_pdf(story_data: dict) -> bytes:
                     if resp.status_code == 200:
                         c_img = io.BytesIO(resp.content)
                         # Center image
-                        x_pos = (210 - 100) / 2
-                        pdf.image(c_img, x=x_pos, w=100)
+                        x_pos = (210 - 120) / 2
+                        pdf.image(c_img, x=x_pos, w=120)
                         pdf.ln(10)
                 except Exception as e:
                     print(f"Error embedding chapter image: {e}")
             
             # Chapter Text
-            pdf.set_font('Times', '', 12)
+            # Use a slightly larger, readable font. 
+            # Helvetica is standard. 'Times' is also good for reading.
+            # Let's stick to Helvetica for consistency or Times for book feel.
+            # User asked for "tipografia mas apropiada para cuentos". 
+            # Sans-serif (Helvetica) is often easier for kids than Serif (Times).
+            pdf.set_font('Helvetica', '', 14) 
+            pdf.set_text_color(40, 40, 40)
+            
+            # Add some spacing between lines (h=8 is default-ish, let's allow more breathing room)
             pdf.multi_cell(0, 8, chap_text)
             
     # Output
