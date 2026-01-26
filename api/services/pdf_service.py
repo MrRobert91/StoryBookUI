@@ -69,7 +69,9 @@ def generate_story_pdf(story_data: dict) -> bytes:
             
     # Output to bytes
     try:
-        return pdf.output(dest='S')
+        output = pdf.output(dest='S')
+        # Supabase storage client usually expects exact bytes, not bytearray
+        return bytes(output)
     except TypeError:
         # Fallback for older fpdf2 versions or different behaviors
         return pdf.output(dest='S').encode('latin-1') 

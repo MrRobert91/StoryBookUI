@@ -59,6 +59,8 @@ def generate_story_task(self, topic: str, user_id: str, jwt_token: str, model: s
             logger.info(f" [Task {task_id}] Generando PDF del cuento...")
             pdf_bytes = generate_story_pdf(story_json)
             
+            logger.info(f" [Task {task_id}] PDF generado. Tipo: {type(pdf_bytes)}, Tamaño: {len(pdf_bytes)} bytes")
+            
             pdf_filename = f"{user_id}/{task_id}.pdf"
             bucket_name = "cuentee_pdfs"
 
