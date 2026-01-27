@@ -203,9 +203,9 @@ def generate_story_pdf(story_data: dict) -> bytes:
             
             # Chapter Text
             try:
-                pdf.set_font('OpenDyslexic', '', 14)
+                pdf.set_font('OpenDyslexic', '', 18)
             except:
-                pdf.set_font('Helvetica', '', 14)
+                pdf.set_font('Helvetica', '', 18)
             pdf.set_text_color(0, 0, 0)
             pdf.multi_cell(0, 8, chap_text)
             
