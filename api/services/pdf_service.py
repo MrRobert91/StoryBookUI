@@ -35,19 +35,19 @@ def get_rounded_image(img_data, radius=30):
 class StoryPDF(FPDF):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        # Main title font
-        font_path = os.path.join(STATIC_DIR, "ShortStack-Regular.ttf")
-        if os.path.exists(font_path):
-            self.add_font("KidFont", "", font_path)
-        else:
-            print(f"Warning: KidFont not found at {font_path}")
+        # OpenDyslexic Font registration
+        font_reg_path = os.path.join(STATIC_DIR, "OpenDyslexic-Regular.otf")
+        font_bold_path = os.path.join(STATIC_DIR, "OpenDyslexic-Bold.otf")
 
-        # Content font (Roboto Light)
-        roboto_path = os.path.join(STATIC_DIR, "Roboto-Light.ttf")
-        if os.path.exists(roboto_path):
-            self.add_font("RobotoLight", "", roboto_path)
+        if os.path.exists(font_reg_path):
+            self.add_font("OpenDyslexic", "", font_reg_path)
         else:
-            print(f"Warning: RobotoLight font not found at {roboto_path}")
+            print(f"Warning: OpenDyslexic-Regular not found at {font_reg_path}")
+
+        if os.path.exists(font_bold_path):
+            self.add_font("OpenDyslexic", "B", font_bold_path)
+        else:
+            print(f"Warning: OpenDyslexic-Bold not found at {font_bold_path}")
 
     def add_page(self, *args, **kwargs):
         super().add_page(*args, **kwargs)
@@ -71,7 +71,7 @@ class StoryPDF(FPDF):
         # Page Number at the bottom center
         self.set_y(-15)
         try:
-            self.set_font('RobotoLight', '', 8)
+            self.set_font('OpenDyslexic', '', 8)
         except:
             self.set_font('Helvetica', '', 8)
         self.set_text_color(128, 128, 128)
@@ -93,25 +93,28 @@ def generate_story_pdf(story_data: dict) -> bytes:
     
     pdf.ln(20)
     
-    # Title Typography: KidFont, with white background box and black border
+    # Title Typography: OpenDyslexic Bold, with white background box and black border
     try:
-        pdf.set_font('KidFont', '', 36)
+        pdf.set_font('OpenDyslexic', 'B', 36)
     except:
         pdf.set_font('Helvetica', 'B', 36)
+
+    h_line = 20
+    # Calculate height for rounded rectangle
+    lines = pdf.multi_cell(0, h_line, title, align='C', split_only=True)
+    total_h = len(lines) * h_line
 
     pdf.set_fill_color(255, 255, 255)
     pdf.set_draw_color(0, 0, 0)
     pdf.set_line_width(2.5)
     
-    # Text Outline for the title
-    pdf.text_mode = TextMode.FILL_STROKE
-    pdf.set_text_color(255, 255, 255) # White fill for letters
+    # Draw rounded rectangle for title background
+    pdf.rect(pdf.get_x(), pdf.get_y(), pdf.w - 2 * pdf.l_margin, total_h, style='FD', round_corners=True, corner_radius=10)
 
-    pdf.multi_cell(0, 20, title, border=1, align='C', fill=True)
+    pdf.set_text_color(0, 0, 0)
+    pdf.multi_cell(0, h_line, title, border=0, align='C')
 
     # Reset text styles
-    pdf.text_mode = TextMode.FILL
-    pdf.set_text_color(0, 0, 0)
     pdf.set_line_width(0.2)
     pdf.ln(15)
 
@@ -156,20 +159,24 @@ def generate_story_pdf(story_data: dict) -> bytes:
             # Chapter Title
             if chap_title:
                 try:
-                    pdf.set_font('KidFont', '', 24)
+                    pdf.set_font('OpenDyslexic', 'B', 24)
                 except:
                     pdf.set_font('Helvetica', 'B', 24)
+
+                h_line = 15
+                lines = pdf.multi_cell(0, h_line, chap_title, align='C', split_only=True)
+                total_h = len(lines) * h_line
 
                 pdf.set_fill_color(255, 255, 255)
                 pdf.set_draw_color(0, 0, 0)
                 pdf.set_line_width(2.5)
-                pdf.text_mode = TextMode.FILL_STROKE
-                pdf.set_text_color(255, 255, 255)
 
-                pdf.multi_cell(0, 15, chap_title, border=1, align='C', fill=True)
+                # Draw rounded rectangle for chapter title
+                pdf.rect(pdf.get_x(), pdf.get_y(), pdf.w - 2 * pdf.l_margin, total_h, style='FD', round_corners=True, corner_radius=8)
 
-                pdf.text_mode = TextMode.FILL
                 pdf.set_text_color(0, 0, 0)
+                pdf.multi_cell(0, h_line, chap_title, border=0, align='C')
+
                 pdf.ln(10)
             
             # Chapter Image
@@ -196,7 +203,7 @@ def generate_story_pdf(story_data: dict) -> bytes:
             
             # Chapter Text
             try:
-                pdf.set_font('RobotoLight', '', 14)
+                pdf.set_font('OpenDyslexic', '', 14)
             except:
                 pdf.set_font('Helvetica', '', 14)
             pdf.set_text_color(0, 0, 0)
@@ -207,7 +214,7 @@ def generate_story_pdf(story_data: dict) -> bytes:
     branding_text = "make yours in cuentee"
 
     try:
-        pdf.set_font('KidFont', '', 16)
+        pdf.set_font('OpenDyslexic', 'B', 16)
     except:
         pdf.set_font('Helvetica', 'B', 16)
 
@@ -221,11 +228,11 @@ def generate_story_pdf(story_data: dict) -> bytes:
     start_x = (210 - total_w) / 2
     y_pos = pdf.get_y()
 
-    # Draw Box: Darker purple background, Black border width 2.0
+    # Draw Box: Darker purple background, Black border width 2.0, Rounded corners
     pdf.set_fill_color(126, 34, 206) # Purple-700
     pdf.set_draw_color(0, 0, 0)
     pdf.set_line_width(2.0)
-    pdf.rect(start_x, y_pos, total_w, h_box, style='FD')
+    pdf.rect(start_x, y_pos, total_w, h_box, style='FD', round_corners=True, corner_radius=3)
 
     # Add link to the whole box area
     pdf.link(start_x, y_pos, total_w, h_box, 'https://www.cuentee.com/')
