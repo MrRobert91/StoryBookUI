@@ -35,11 +35,19 @@ def get_rounded_image(img_data, radius=30):
 class StoryPDF(FPDF):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
+        # Main title font
         font_path = os.path.join(STATIC_DIR, "ShortStack-Regular.ttf")
         if os.path.exists(font_path):
             self.add_font("KidFont", "", font_path)
         else:
-            print(f"Warning: Font not found at {font_path}")
+            print(f"Warning: KidFont not found at {font_path}")
+
+        # Content font (Roboto Light)
+        roboto_path = os.path.join(STATIC_DIR, "Roboto-Light.ttf")
+        if os.path.exists(roboto_path):
+            self.add_font("RobotoLight", "", roboto_path)
+        else:
+            print(f"Warning: RobotoLight font not found at {roboto_path}")
 
     def add_page(self, *args, **kwargs):
         super().add_page(*args, **kwargs)
@@ -47,8 +55,8 @@ class StoryPDF(FPDF):
         self.set_fill_color(250, 245, 255)
         self.rect(0, 0, self.w, self.h, style='F')
 
-        # 2. Decorative Border: purple-600 (RGB 147, 51, 234)
-        self.set_draw_color(147, 51, 234)
+        # 2. Decorative Border: Black
+        self.set_draw_color(0, 0, 0)
         self.set_line_width(1.5)
         margin = 5
         # Draw a rectangle with rounded corners as a decorative frame
@@ -90,7 +98,7 @@ def generate_story_pdf(story_data: dict) -> bytes:
 
     pdf.set_fill_color(255, 255, 255)
     pdf.set_draw_color(0, 0, 0)
-    pdf.set_line_width(1)
+    pdf.set_line_width(1.5)
     
     # Text Outline for the title
     pdf.text_mode = TextMode.FILL_STROKE
@@ -121,8 +129,8 @@ def generate_story_pdf(story_data: dict) -> bytes:
                 info = pdf.image(img_stream, x=x_pos, w=w_img)
                 h_img = info.rendered_height
 
-                # Draw purple frame around the image
-                pdf.set_draw_color(147, 51, 234)
+                # Draw black frame around the image
+                pdf.set_draw_color(0, 0, 0)
                 pdf.set_line_width(1)
                 pdf.rect(x_pos - 0.5, y_start - 0.5, w_img + 1, h_img + 1, style='D', round_corners=True, corner_radius=10)
                 pdf.set_y(y_start + h_img + 10)
@@ -151,7 +159,7 @@ def generate_story_pdf(story_data: dict) -> bytes:
 
                 pdf.set_fill_color(255, 255, 255)
                 pdf.set_draw_color(0, 0, 0)
-                pdf.set_line_width(0.8)
+                pdf.set_line_width(1.2)
                 pdf.text_mode = TextMode.FILL_STROKE
                 pdf.set_text_color(255, 255, 255)
 
@@ -175,8 +183,8 @@ def generate_story_pdf(story_data: dict) -> bytes:
                         info = pdf.image(img_stream, x=x_pos, w=w_img)
                         h_img = info.rendered_height
 
-                        # Purple Frame
-                        pdf.set_draw_color(147, 51, 234)
+                        # Black Frame
+                        pdf.set_draw_color(0, 0, 0)
                         pdf.set_line_width(1)
                         pdf.rect(x_pos - 0.5, y_start - 0.5, w_img + 1, h_img + 1, style='D', round_corners=True, corner_radius=8)
                         pdf.set_y(y_start + h_img + 10)
@@ -184,8 +192,11 @@ def generate_story_pdf(story_data: dict) -> bytes:
                     print(f"Error embedding chapter image: {e}")
             
             # Chapter Text
-            pdf.set_font('Helvetica', '', 14)
-            pdf.set_text_color(40, 40, 40)
+            try:
+                pdf.set_font('RobotoLight', '', 14)
+            except:
+                pdf.set_font('Helvetica', '', 14)
+            pdf.set_text_color(0, 0, 0)
             pdf.multi_cell(0, 8, chap_text)
             
     # --- Last Page Branding ---
@@ -208,7 +219,9 @@ def generate_story_pdf(story_data: dict) -> bytes:
     pdf.set_x(start_x)
 
     # Text link
-    pdf.cell(text_w, 10, branding_text, 0, 0, 'L', link='https://www.cuentee.com/')
+    pdf.set_draw_color(0, 0, 0)
+    pdf.set_line_width(0.1)
+    pdf.cell(text_w, 10, branding_text, border=1, ln=0, align='L', link='https://www.cuentee.com/')
 
     # Favicon link
     favicon_path = os.path.join(STATIC_DIR, "favicon.png")
