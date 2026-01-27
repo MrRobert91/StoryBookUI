@@ -93,7 +93,7 @@ def generate_story_pdf(story_data: dict) -> bytes:
     
     pdf.ln(20)
     
-    # Title Typography: OpenDyslexic Bold, with white background box and black border
+    # Title Typography
     try:
         pdf.set_font('OpenDyslexic', 'B', 36)
     except:
@@ -109,7 +109,9 @@ def generate_story_pdf(story_data: dict) -> bytes:
     pdf.set_line_width(2.5)
     
     # Draw rounded rectangle for title background
-    pdf.rect(pdf.get_x(), pdf.get_y(), pdf.w - 2 * pdf.l_margin, total_h, style='FD', round_corners=True, corner_radius=10)
+    # Use full width available (w - 2*margin)
+    available_w = pdf.w - 2 * pdf.l_margin
+    pdf.rect(pdf.l_margin, pdf.get_y(), available_w, total_h, style='FD', round_corners=True, corner_radius=10)
 
     pdf.set_text_color(0, 0, 0)
     pdf.multi_cell(0, h_line, title, border=0, align='C')
@@ -124,18 +126,20 @@ def generate_story_pdf(story_data: dict) -> bytes:
         try:
             response = requests.get(cover_url, timeout=10)
             if response.status_code == 200:
+                # Rounded image with radius
                 rounded_img = get_rounded_image(response.content, radius=80)
                 img_stream = io.BytesIO(rounded_img)
 
-                w_img = 140
-                x_pos = (210 - w_img) / 2
+                # Full width (210 - 40 = 170mm)
+                w_img = 170 
+                x_pos = pdf.l_margin # 20mm
 
                 y_start = pdf.get_y()
                 # Place image
                 info = pdf.image(img_stream, x=x_pos, w=w_img)
                 h_img = info.rendered_height
 
-                # Draw black frame around the image
+                # Draw black frame
                 pdf.set_draw_color(0, 0, 0)
                 pdf.set_line_width(1)
                 pdf.rect(x_pos - 0.5, y_start - 0.5, w_img + 1, h_img + 1, style='D', round_corners=True, corner_radius=10)
@@ -171,12 +175,11 @@ def generate_story_pdf(story_data: dict) -> bytes:
                 pdf.set_draw_color(0, 0, 0)
                 pdf.set_line_width(2.5)
 
-                # Draw rounded rectangle for chapter title
-                pdf.rect(pdf.get_x(), pdf.get_y(), pdf.w - 2 * pdf.l_margin, total_h, style='FD', round_corners=True, corner_radius=8)
+                # Full width
+                pdf.rect(pdf.l_margin, pdf.get_y(), available_w, total_h, style='FD', round_corners=True, corner_radius=8)
 
                 pdf.set_text_color(0, 0, 0)
                 pdf.multi_cell(0, h_line, chap_title, border=0, align='C')
-
                 pdf.ln(10)
             
             # Chapter Image
@@ -186,8 +189,10 @@ def generate_story_pdf(story_data: dict) -> bytes:
                     if resp.status_code == 200:
                         rounded_img = get_rounded_image(resp.content, radius=50)
                         img_stream = io.BytesIO(rounded_img)
-                        w_img = 120
-                        x_pos = (210 - w_img) / 2
+                        
+                        # Full Width
+                        w_img = 170
+                        x_pos = pdf.l_margin
 
                         y_start = pdf.get_y()
                         info = pdf.image(img_stream, x=x_pos, w=w_img)
@@ -207,45 +212,65 @@ def generate_story_pdf(story_data: dict) -> bytes:
             except:
                 pdf.set_font('Helvetica', '', 18)
             pdf.set_text_color(0, 0, 0)
-            pdf.multi_cell(0, 8, chap_text)
+            pdf.multi_cell(0, 10, chap_text) # Increased line height for 18pt font
             
-    # --- Last Page Branding ---
-    pdf.set_y(-35)
-    branding_text = "make yours in cuentee"
+    # --- Last Page: Call to Action ---
+    pdf.add_page()
+    
+    # Vertically center content approximately
+    # Page height ~297mm. Content height estimate:
+    # Title (20) + Image (80) + Text (20) = 120mm
+    # Start Y approx 60mm
+    pdf.set_y(60)
+
+    # 1. Big Logo Image
+    logo_path = os.path.join(STATIC_DIR, "logo_cta.png")
+    if os.path.exists(logo_path):
+        # Center logo, maybe 80mm wide? User said "imagen como logo en grande"
+        w_logo = 100
+        x_logo = (210 - w_logo) / 2
+        pdf.image(logo_path, x=x_logo, w=w_logo)
+        pdf.ln(10)
+
+    pdf.ln(10)
+
+    # 2. CTA Box
+    cta_text = "Create your own custom stories with Cuentee"
+    cta_link = "https://www.cuentee.com/"
 
     try:
-        pdf.set_font('OpenDyslexic', 'B', 16)
+        pdf.set_font('OpenDyslexic', 'B', 24)
     except:
-        pdf.set_font('Helvetica', 'B', 16)
+        pdf.set_font('Helvetica', 'B', 24)
 
-    text_w = pdf.get_string_width(branding_text)
-    favicon_w = 8
-    spacing = 3
-    padding_x = 6
-    h_box = 14
-
-    total_w = text_w + spacing + favicon_w + 2 * padding_x
-    start_x = (210 - total_w) / 2
-    y_pos = pdf.get_y()
-
-    # Draw Box: Darker purple background, Black border width 2.0, Rounded corners
+    # Calculate text width/height
+    # We want a big box. Let's make it full width (170mm).
+    box_w = 170
+    box_x = 20
+    
+    # Draw logic similar to title
     pdf.set_fill_color(126, 34, 206) # Purple-700
     pdf.set_draw_color(0, 0, 0)
     pdf.set_line_width(2.0)
-    pdf.rect(start_x, y_pos, total_w, h_box, style='FD', round_corners=True, corner_radius=3)
+    
+    # MultiCell to calculate height
+    lines = pdf.multi_cell(box_w, 15, cta_text, align='C', split_only=True)
+    box_h = (len(lines) * 15) + 20 # Add padding
+    
+    # Draw Box background
+    # Use link on the rect? FPDF link is usually on cell/image. 
+    # We can add a link over the area.
+    pdf.rect(box_x, pdf.get_y(), box_w, box_h, style='FD', round_corners=True, corner_radius=15)
+    
+    # Add Link coverage
+    pdf.link(box_x, pdf.get_y(), box_w, box_h, cta_link)
 
-    # Add link to the whole box area
-    pdf.link(start_x, y_pos, total_w, h_box, 'https://www.cuentee.com/')
-
-    # Place Text (White)
+    # Add Text inside
     pdf.set_text_color(255, 255, 255)
-    pdf.set_xy(start_x + padding_x, y_pos)
-    pdf.cell(text_w, h_box, branding_text, border=0, ln=0, align='L')
-
-    # Place Favicon (after text)
-    favicon_path = os.path.join(STATIC_DIR, "favicon.png")
-    if os.path.exists(favicon_path):
-        pdf.image(favicon_path, x=start_x + padding_x + text_w + spacing, y=y_pos + (h_box - favicon_w)/2, w=favicon_w)
+    # Move cursor inside padding
+    pdf.set_y(pdf.get_y() + 10) 
+    pdf.set_x(box_x)
+    pdf.multi_cell(box_w, 15, cta_text, border=0, align='C')
 
     # Output to bytes
     return bytes(pdf.output())
