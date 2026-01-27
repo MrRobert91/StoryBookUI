@@ -70,7 +70,10 @@ class StoryPDF(FPDF):
     def footer(self):
         # Page Number at the bottom center
         self.set_y(-15)
-        self.set_font('Helvetica', 'I', 8)
+        try:
+            self.set_font('RobotoLight', '', 8)
+        except:
+            self.set_font('Helvetica', '', 8)
         self.set_text_color(128, 128, 128)
         self.cell(0, 10, f'Page {self.page_no()} / {{nb}}', 0, 0, 'C')
 
@@ -98,7 +101,7 @@ def generate_story_pdf(story_data: dict) -> bytes:
 
     pdf.set_fill_color(255, 255, 255)
     pdf.set_draw_color(0, 0, 0)
-    pdf.set_line_width(1.5)
+    pdf.set_line_width(2.5)
     
     # Text Outline for the title
     pdf.text_mode = TextMode.FILL_STROKE
@@ -159,7 +162,7 @@ def generate_story_pdf(story_data: dict) -> bytes:
 
                 pdf.set_fill_color(255, 255, 255)
                 pdf.set_draw_color(0, 0, 0)
-                pdf.set_line_width(1.2)
+                pdf.set_line_width(2.5)
                 pdf.text_mode = TextMode.FILL_STROKE
                 pdf.set_text_color(255, 255, 255)
 
@@ -200,36 +203,42 @@ def generate_story_pdf(story_data: dict) -> bytes:
             pdf.multi_cell(0, 8, chap_text)
             
     # --- Last Page Branding ---
-    # Add branding at the bottom of the last page
     pdf.set_y(-35)
+    branding_text = "make yours in cuentee"
+
     try:
         pdf.set_font('KidFont', '', 16)
     except:
         pdf.set_font('Helvetica', 'B', 16)
 
-    pdf.set_text_color(147, 51, 234) # Purple
-
-    branding_text = "make yours in cuentee"
     text_w = pdf.get_string_width(branding_text)
     favicon_w = 8
     spacing = 3
-    total_w = text_w + spacing + favicon_w
+    padding_x = 6
+    h_box = 14
 
+    total_w = text_w + spacing + favicon_w + 2 * padding_x
     start_x = (210 - total_w) / 2
-    pdf.set_x(start_x)
+    y_pos = pdf.get_y()
 
-    # Text link
+    # Draw Box: Darker purple background, Black border width 2.0
+    pdf.set_fill_color(126, 34, 206) # Purple-700
     pdf.set_draw_color(0, 0, 0)
-    pdf.set_line_width(0.1)
-    pdf.cell(text_w, 10, branding_text, border=1, ln=0, align='L', link='https://www.cuentee.com/')
+    pdf.set_line_width(2.0)
+    pdf.rect(start_x, y_pos, total_w, h_box, style='FD')
 
-    # Favicon link
+    # Add link to the whole box area
+    pdf.link(start_x, y_pos, total_w, h_box, 'https://www.cuentee.com/')
+
+    # Place Text (White)
+    pdf.set_text_color(255, 255, 255)
+    pdf.set_xy(start_x + padding_x, y_pos)
+    pdf.cell(text_w, h_box, branding_text, border=0, ln=0, align='L')
+
+    # Place Favicon (after text)
     favicon_path = os.path.join(STATIC_DIR, "favicon.png")
     if os.path.exists(favicon_path):
-        # Align favicon with text
-        pdf.image(favicon_path, x=start_x + text_w + spacing, y=pdf.get_y() + 1, w=favicon_w)
-        # Add a link over the favicon area
-        pdf.link(start_x + text_w + spacing, pdf.get_y() + 1, favicon_w, favicon_w, 'https://www.cuentee.com/')
+        pdf.image(favicon_path, x=start_x + padding_x + text_w + spacing, y=y_pos + (h_box - favicon_w)/2, w=favicon_w)
 
     # Output to bytes
     return bytes(pdf.output())
