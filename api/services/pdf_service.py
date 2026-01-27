@@ -203,46 +203,54 @@ def generate_story_pdf(story_data: dict) -> bytes:
             
             # Chapter Text
             try:
-                pdf.set_font('OpenDyslexic', '', 14)
+                pdf.set_font('OpenDyslexic', '', 17)
             except:
-                pdf.set_font('Helvetica', '', 14)
+                pdf.set_font('Helvetica', '', 17)
             pdf.set_text_color(0, 0, 0)
-            pdf.multi_cell(0, 8, chap_text)
+            pdf.multi_cell(0, 11, chap_text)
             
     # --- Last Page Branding ---
-    pdf.set_y(-35)
-    branding_text = "make yours in cuentee"
+    branding_text = "Make yours in cuentee"
+    h_box = 21 # 50% larger than 14
+    w_box = 170 # Leaving 20mm margin on each side (210 - 40)
+    start_x = 20
+    favicon_w = 12 # Scaled up
+    spacing = 5
 
-    try:
-        pdf.set_font('OpenDyslexic', 'B', 16)
-    except:
-        pdf.set_font('Helvetica', 'B', 16)
+    # Move to a safe position at the bottom area if there's space, or let it trigger a new page
+    if pdf.get_y() < pdf.h - 50:
+        pdf.set_y(-40) # Position near bottom
+    elif pdf.get_y() + h_box + 10 > pdf.page_break_trigger:
+        pdf.add_page()
+    else:
+        pdf.ln(10)
 
-    text_w = pdf.get_string_width(branding_text)
-    favicon_w = 8
-    spacing = 3
-    padding_x = 6
-    h_box = 14
-
-    total_w = text_w + spacing + favicon_w + 2 * padding_x
-    start_x = (210 - total_w) / 2
     y_pos = pdf.get_y()
 
-    # Draw Box: Darker purple background, Black border width 2.0, Rounded corners
-    pdf.set_fill_color(126, 34, 206) # Purple-700
+    try:
+        pdf.set_font('OpenDyslexic', 'B', 24)
+    except:
+        pdf.set_font('Helvetica', 'B', 24)
+
+    text_w = pdf.get_string_width(branding_text)
+    content_w = text_w + spacing + favicon_w
+    padding_x = (w_box - content_w) / 2
+
+    # Draw Box: Intermediate purple (Purple-300), Black border, Rounded corners
+    pdf.set_fill_color(216, 180, 254)
     pdf.set_draw_color(0, 0, 0)
     pdf.set_line_width(2.0)
-    pdf.rect(start_x, y_pos, total_w, h_box, style='FD', round_corners=True, corner_radius=3)
+    pdf.rect(start_x, y_pos, w_box, h_box, style='FD', round_corners=True, corner_radius=5)
 
     # Add link to the whole box area
-    pdf.link(start_x, y_pos, total_w, h_box, 'https://www.cuentee.com/')
+    pdf.link(start_x, y_pos, w_box, h_box, 'https://www.cuentee.com/')
 
-    # Place Text (White)
-    pdf.set_text_color(255, 255, 255)
+    # Place Text (Black)
+    pdf.set_text_color(0, 0, 0)
     pdf.set_xy(start_x + padding_x, y_pos)
     pdf.cell(text_w, h_box, branding_text, border=0, ln=0, align='L')
 
-    # Place Favicon (after text)
+    # Place Favicon (after text, centered vertically in box)
     favicon_path = os.path.join(STATIC_DIR, "favicon.png")
     if os.path.exists(favicon_path):
         pdf.image(favicon_path, x=start_x + padding_x + text_w + spacing, y=y_pos + (h_box - favicon_w)/2, w=favicon_w)
