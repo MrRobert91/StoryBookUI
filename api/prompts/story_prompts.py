@@ -3,7 +3,8 @@ import os
 DEFAULT_NUM_CHAPTERS = int(os.getenv("NUM_CHAPTERS", "10"))
 WORDS_PER_CHAPTER = 350
 
-STORY_SYSTEM_PROMPT = f"""Generate creative fantasy stories for children with exactly {DEFAULT_NUM_CHAPTERS} chapters.
+def get_story_system_prompt(num_chapters: int = DEFAULT_NUM_CHAPTERS) -> str:
+    return f"""Generate creative fantasy stories for children with exactly {num_chapters} chapters.
 
 IMPORTANT GUIDELINES:
 - Each chapter must have approximately {WORDS_PER_CHAPTER} words
@@ -19,8 +20,7 @@ Example structure:
   "chapters": [
     {{"title": "Chapter 1: The Discovery", "content": "Once upon a time..."}},
     {{"title": "Chapter 2: The Journey", "content": "The young dragon..."}},
-    {{"title": "Chapter 3: The Challenge", "content": "The dragon faced a challenge..."}},
-    {{"title": "Chapter 4: The Triumph", "content": "The dragon triumphed..."}}
+    ...
   ]
 }}"""
 

@@ -25,6 +25,7 @@ class TaleAIRequest(BaseModel):
 
 class StoryRequest(BaseModel):
     topic: str
+    num_chapters: int = 3
     # model: str = "dall-e-3"  # Configured in backend
 
 # --- Helper Functions ---
@@ -135,7 +136,8 @@ async def generate_story_async(request: StoryRequest, user: UserProfile = Depend
             topic=request.topic,
             user_id=str(user.id),
             jwt_token=user.token,
-            model=None
+            model=None,
+            num_chapters=request.num_chapters
         )
         return {"task_id": task.id, "status": "processing"}
     except Exception as e:
@@ -150,6 +152,7 @@ class GuidedStoryRequest(BaseModel):
     scientific_topic: str
     mission: str
     visual_style: str
+    num_chapters: int = 3
 
 from api.prompts.guided_story_prompts import VISUAL_STYLE_PROMPTS, TOPIC_PROMPTS, MISSION_PROMPTS
 
@@ -186,7 +189,7 @@ async def generate_guided_story_async(req: GuidedStoryRequest, user: UserProfile
         f"- Trama/Misión: {mission_description}\n\n"
         f"ESTRUCTURA OBLIGATORIA:\n"
         f"1. Título: Creativo y relacionado con la misión.\n"
-        f"2. Capítulos: Divide la historia en 3-5 capítulos cortos.\n"
+        f"2. Capítulos: Divide la historia en {req.num_chapters} capítulos cortos.\n"
         f"3. Contenido: El tono debe ser divertido, seguro y fácil de leer. "
         f"Asegúrate de explicar el concepto científico de forma natural dentro de la narrativa.\n"
         f"Devuelve SOLO el JSON con el formato establecido."
@@ -211,7 +214,8 @@ async def generate_guided_story_async(req: GuidedStoryRequest, user: UserProfile
             user_id=str(user.id),
             jwt_token=user.token,
             model=None,
-            image_style_context=image_style_context
+            image_style_context=image_style_context,
+            num_chapters=req.num_chapters
         )
         return {"task_id": task.id, "status": "processing"}
     except Exception as e:

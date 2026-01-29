@@ -24,7 +24,6 @@ export default function TaleGenerator() {
     status: asyncStatus,
     storyData: asyncStoryData,
     error: asyncError,
-    generateStoryAsync,
     generateStory,
   } = useStoryGeneration()
 
@@ -32,6 +31,7 @@ export default function TaleGenerator() {
   const [story, setStory] = useState("")
   const [aiStory, setAiStory] = useState<Chapter[] | null>(null)
   const [storyTitle, setStoryTitle] = useState<string | null>(null)
+  const [numChapters, setNumChapters] = useState("3")
 
   const [isGeneratingAI, setIsGeneratingAI] = useState(false)
   const [isGeneratingAIJWT, setIsGeneratingAIJWT] = useState(false)
@@ -435,7 +435,10 @@ Ancient trees whispered secrets in languages long forgotten, and magical creatur
         throw new Error("Authentication required. Please log in again.")
       }
 
-      await generateStory(prompt.trim(), session.access_token)
+      await generateStory({
+        topic: prompt.trim(),
+        num_chapters: parseInt(numChapters)
+      }, session.access_token)
     } catch (error) {
       console.error("[v0] Error initiating async story generation:", error)
       if (error instanceof Error) {
@@ -468,13 +471,36 @@ Ancient trees whispered secrets in languages long forgotten, and magical creatur
               disabled={isAnyGenerating || authLoading}
             />
 
+            {/* Chapter Length Selector */}
+            <div className="space-y-2">
+              <span className="text-sm font-medium text-gray-700">Story Length (Chapters)</span>
+              <div className="flex gap-4">
+                {["3", "6", "9"].map((num) => (
+                  <label key={num} className="flex items-center gap-2 cursor-pointer bg-white px-3 py-2 rounded-md border hover:bg-gray-50 transition-colors">
+                    <input
+                      type="radio"
+                      name="numChapters"
+                      value={num}
+                      checked={numChapters === num}
+                      onChange={(e) => setNumChapters(e.target.value)}
+                      className="w-4 h-4 text-purple-600 focus:ring-purple-500"
+                      disabled={isAnyGenerating}
+                    />
+                    <span className="text-sm text-gray-700">
+                      {num === "3" ? "Short (3)" : num === "6" ? "Medium (6)" : "Long (9)"}
+                    </span>
+                  </label>
+                ))}
+              </div>
+            </div>
+
             {(isSaving || saveSuccess || saveError) && (
               <div
                 className={`text-sm p-3 rounded-lg flex items-center gap-2 ${saveSuccess
-                    ? "bg-green-50 text-green-700 border border-green-200"
-                    : saveError
-                      ? "bg-red-50 text-red-700 border border-red-200"
-                      : "bg-blue-50 text-blue-700 border border-blue-200"
+                  ? "bg-green-50 text-green-700 border border-green-200"
+                  : saveError
+                    ? "bg-red-50 text-red-700 border border-red-200"
+                    : "bg-blue-50 text-blue-700 border border-blue-200"
                   }`}
               >
                 {isSaving && <Loader2 className="h-4 w-4 animate-spin" />}
@@ -509,8 +535,8 @@ Ancient trees whispered secrets in languages long forgotten, and magical creatur
               <button
                 onClick={generateAIStory}
                 className={`py-4 px-6 text-lg font-medium rounded-lg transition-colors flex items-center justify-center ${!prompt.trim() || isAnyGenerating || authLoading || !user
-                    ? "bg-gray-400 cursor-not-allowed text-gray-600"
-                    : "bg-pink-600 hover:bg-pink-700 text-white"
+                  ? "bg-gray-400 cursor-not-allowed text-gray-600"
+                  : "bg-pink-600 hover:bg-pink-700 text-white"
                   }`}
                 disabled={!prompt.trim() || isAnyGenerating || authLoading || !user}
               >
@@ -530,8 +556,8 @@ Ancient trees whispered secrets in languages long forgotten, and magical creatur
               <button
                 onClick={generateStoryWithAIJWT}
                 className={`py-4 px-6 text-lg font-medium rounded-lg transition-colors flex items-center justify-center ${!prompt.trim() || isAnyGenerating || authLoading || !user
-                    ? "bg-gray-400 cursor-not-allowed text-gray-600"
-                    : "bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 text-white"
+                  ? "bg-gray-400 cursor-not-allowed text-gray-600"
+                  : "bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 text-white"
                   }`}
                 disabled={!prompt.trim() || isAnyGenerating || authLoading || !user}
               >
@@ -551,8 +577,8 @@ Ancient trees whispered secrets in languages long forgotten, and magical creatur
               <button
                 onClick={generateStoryWithImagesAIJWT}
                 className={`py-4 px-6 text-lg font-medium rounded-lg transition-colors flex items-center justify-center sm:col-span-2 ${!prompt.trim() || isAnyGenerating || authLoading || !user
-                    ? "bg-gray-400 cursor-not-allowed text-gray-600"
-                    : "bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white"
+                  ? "bg-gray-400 cursor-not-allowed text-gray-600"
+                  : "bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white"
                   }`}
                 disabled={!prompt.trim() || isAnyGenerating || authLoading || !user}
               >

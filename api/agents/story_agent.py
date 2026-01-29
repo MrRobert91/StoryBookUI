@@ -5,7 +5,7 @@ import logging
 from langchain_groq import ChatGroq
 from langgraph.graph import StateGraph, START, END
 
-from api.prompts.story_prompts import STORY_SYSTEM_PROMPT, IMAGE_PROMPT_SYSTEM, DEFAULT_NUM_CHAPTERS, WORDS_PER_CHAPTER
+from api.prompts.story_prompts import get_story_system_prompt, IMAGE_PROMPT_SYSTEM, DEFAULT_NUM_CHAPTERS, WORDS_PER_CHAPTER
 # Import utilities from the sibling module
 from .utils import (
     Story, 
@@ -32,7 +32,7 @@ story_llm = ChatGroq(
 )
 
 story_agent = story_llm.with_structured_output(Story, method="json_mode")
-logger.info(f"story_agent ready (configured for {DEFAULT_NUM_CHAPTERS} chapters, ~{WORDS_PER_CHAPTER} words each)")
+logger.info(f"story_agent ready (configured for ~{WORDS_PER_CHAPTER} words per chapter)")
 
 logger.info("Building image_llm (Groq)...")
 image_llm = ChatGroq(
@@ -72,10 +72,12 @@ def story_generation_node(state: StoryState):
     """Generate story text using Groq LLM"""
     logger.info("Node: story_generation")
     messages = state.get("messages", [])
+    num_chapters = state.get("num_chapters", DEFAULT_NUM_CHAPTERS)
     
-    # Construir mensajes con system prompt
+    # Construir mensajes con system prompt dinamico
+    system_prompt = get_story_system_prompt(num_chapters)
     full_messages = [
-        {"role": "system", "content": STORY_SYSTEM_PROMPT},
+        {"role": "system", "content": system_prompt},
         *messages
     ]
     

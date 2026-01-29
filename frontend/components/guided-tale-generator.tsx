@@ -65,6 +65,7 @@ export default function GuidedTaleGenerator() {
         scientificTopic: "",
         mission: "",
         visualStyle: "",
+        numChapters: "3",
     })
 
     const [mounted, setMounted] = useState(false)
@@ -98,6 +99,7 @@ export default function GuidedTaleGenerator() {
         if (!isFormValid()) return
 
         try {
+            if (!supabase) throw new Error("Supabase client not initialized")
             const { data: { session } } = await supabase.auth.getSession()
             if (!session?.access_token) throw new Error("Authentication required")
 
@@ -108,6 +110,7 @@ export default function GuidedTaleGenerator() {
                     scientific_topic: formData.scientificTopic,
                     mission: formData.mission,
                     visual_style: formData.visualStyle,
+                    num_chapters: parseInt(formData.numChapters),
                 },
                 session.access_token,
                 "/stories/generate_guided_story_async"
@@ -145,6 +148,29 @@ export default function GuidedTaleGenerator() {
                             <div className="flex items-center space-x-2">
                                 <RadioGroupItem value="5-8" id="age-5-8" />
                                 <Label htmlFor="age-5-8">6-8 Years</Label>
+                            </div>
+                        </RadioGroup>
+                    </div>
+
+                    {/* Chapter Length */}
+                    <div className="space-y-2">
+                        <Label>Story Length</Label>
+                        <RadioGroup
+                            className="flex gap-4"
+                            value={formData.numChapters}
+                            onValueChange={(val) => handleInputChange("numChapters", val)}
+                        >
+                            <div className="flex items-center space-x-2">
+                                <RadioGroupItem value="3" id="chapters-3" />
+                                <Label htmlFor="chapters-3">Short (3 Chapters)</Label>
+                            </div>
+                            <div className="flex items-center space-x-2">
+                                <RadioGroupItem value="6" id="chapters-6" />
+                                <Label htmlFor="chapters-6">Medium (6 Chapters)</Label>
+                            </div>
+                            <div className="flex items-center space-x-2">
+                                <RadioGroupItem value="9" id="chapters-9" />
+                                <Label htmlFor="chapters-9">Long (9 Chapters)</Label>
                             </div>
                         </RadioGroup>
                     </div>
