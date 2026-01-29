@@ -1,6 +1,6 @@
 import os
 
-DEFAULT_NUM_CHAPTERS = int(os.getenv("NUM_CHAPTERS", "3"))
+DEFAULT_NUM_CHAPTERS = int(os.getenv("NUM_CHAPTERS", "10"))
 WORDS_PER_CHAPTER = 350
 
 STORY_SYSTEM_PROMPT = f"""Generate creative fantasy stories for children with exactly {DEFAULT_NUM_CHAPTERS} chapters.
