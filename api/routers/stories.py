@@ -26,6 +26,7 @@ class TaleAIRequest(BaseModel):
 class StoryRequest(BaseModel):
     topic: str
     num_chapters: int = 3
+    visual_style: str | None = None
     # model: str = "dall-e-3"  # Configured in backend
 
 # --- Helper Functions ---
@@ -131,13 +132,23 @@ async def generate_story_async(request: StoryRequest, user: UserProfile = Depend
     """Inicia la generación de un cuento de forma asíncrona."""
     logger.info("Enqueuing async story generation task for user %s", user.id)
 
+    # Determine Image Style Context
+    image_style_context = None
+    if request.visual_style:
+         # Import here to avoid circulars if any, though top level is better if possible. 
+         # Assuming clean imports.
+         from api.prompts.guided_story_prompts import VISUAL_STYLE_PROMPTS
+         style_desc = VISUAL_STYLE_PROMPTS.get(request.visual_style, request.visual_style)
+         image_style_context = f"ARTISTIC DIRECTION (Must follow strictly):\n{style_desc}"
+
     try:
         task = generate_story_task.delay(
             topic=request.topic,
             user_id=str(user.id),
             jwt_token=user.token,
             model=None,
-            num_chapters=request.num_chapters
+            num_chapters=request.num_chapters,
+            image_style_context=image_style_context
         )
         return {"task_id": task.id, "status": "processing"}
     except Exception as e:

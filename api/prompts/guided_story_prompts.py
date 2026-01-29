@@ -20,6 +20,17 @@ VISUAL_STYLE_PROMPTS: Dict[str, str] = {
         "Iluminación volumétrica, texturas detalladas (pelo, tela), profundidad de campo suave. "
         "Personajes con proporciones agradables, ojos grandes y expresivos. "
         "Acabado pulido y cinematográfico."
+    ),
+    "anime": (
+        "Estilo anime japonés de alta calidad (tipo Studio Ghibli). "
+        "Colores vibrantes, fondos detallados y pintorescos, personajes con ojos expresivos y estética emocional. "
+        "Iluminación dramática y atmosférica."
+    ),
+    "child_crayons": (
+        "Dibujo infantil hecho con ceras de colores (crayons) sobre papel texturizado. "
+        "Trazos imperfectos, ingenuos y coloridos. "
+        "Estilo 'garabato' artístico, muy creativo y adorable. "
+        "Fondo de papel blanco o rugoso visible."
     )
 }
 

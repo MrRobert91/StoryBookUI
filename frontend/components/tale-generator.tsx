@@ -32,6 +32,7 @@ export default function TaleGenerator() {
   const [aiStory, setAiStory] = useState<Chapter[] | null>(null)
   const [storyTitle, setStoryTitle] = useState<string | null>(null)
   const [numChapters, setNumChapters] = useState("3")
+  const [visualStyle, setVisualStyle] = useState("cartoons")
 
   const [isGeneratingAI, setIsGeneratingAI] = useState(false)
   const [isGeneratingAIJWT, setIsGeneratingAIJWT] = useState(false)
@@ -437,7 +438,8 @@ Ancient trees whispered secrets in languages long forgotten, and magical creatur
 
       await generateStory({
         topic: prompt.trim(),
-        num_chapters: parseInt(numChapters)
+        num_chapters: parseInt(numChapters),
+        visual_style: visualStyle
       }, session.access_token)
     } catch (error) {
       console.error("[v0] Error initiating async story generation:", error)
@@ -490,6 +492,35 @@ Ancient trees whispered secrets in languages long forgotten, and magical creatur
                       {num === "3" ? "Short (3)" : num === "6" ? "Medium (6)" : "Long (9)"}
                     </span>
                   </label>
+                ))}
+              </div>
+            </div>
+
+            {/* Visual Style Selector */}
+            <div className="space-y-3">
+              <span className="text-sm font-medium text-gray-700">Artistic Style</span>
+              <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-3">
+                {[
+                  { id: "cartoons", label: "Cartoons", icon: "🎨" },
+                  { id: "watercolor", label: "Watercolor", icon: "🖌️" },
+                  { id: "3d_animation", label: "3D Animation", icon: "🎭" },
+                  { id: "anime", label: "Anime", icon: "🏯" },
+                  { id: "child_crayons", label: "Child's Drawing", icon: "🖍️" },
+                ].map((style) => (
+                  <div
+                    key={style.id}
+                    onClick={() => !isAnyGenerating && setVisualStyle(style.id)}
+                    className={`
+                      cursor-pointer rounded-lg border p-3 flex flex-col items-center justify-center gap-2 transition-all
+                      ${visualStyle === style.id
+                        ? "bg-purple-50 border-purple-500 ring-1 ring-purple-500 text-purple-700"
+                        : "bg-white border-gray-200 hover:border-purple-300 hover:bg-gray-50 text-gray-600"}
+                      ${isAnyGenerating ? "opacity-50 cursor-not-allowed" : ""}
+                    `}
+                  >
+                    <span className="text-2xl">{style.icon}</span>
+                    <span className="text-xs font-medium text-center">{style.label}</span>
+                  </div>
                 ))}
               </div>
             </div>
