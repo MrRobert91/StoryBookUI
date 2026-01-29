@@ -271,6 +271,14 @@ export default function GuidedTaleGenerator() {
                                 <RadioGroupItem value="3d_animation" id="style-3d" />
                                 <Label htmlFor="style-3d">Animación 3D</Label>
                             </div>
+                            <div className="flex items-center space-x-2">
+                                <RadioGroupItem value="anime" id="style-anime" />
+                                <Label htmlFor="style-anime">Anime</Label>
+                            </div>
+                            <div className="flex items-center space-x-2">
+                                <RadioGroupItem value="child_crayons" id="style-child" />
+                                <Label htmlFor="style-child">Dibujo infantil</Label>
+                            </div>
                         </RadioGroup>
                     </div>
 
