@@ -3,7 +3,7 @@ import io
 import requests
 from fpdf import FPDF
 from fpdf.enums import TextMode
-from PIL import Image, ImageDraw
+from PIL import Image, ImageDraw, ImageEnhance
 
 # Assuming this file is in api/services/pdf_service.py
 STATIC_DIR = os.path.join(os.path.dirname(os.path.dirname(__file__)), "static")
@@ -32,6 +32,30 @@ def get_rounded_image(img_data, radius=30):
         print(f"Error rounding image: {e}")
         return img_data
 
+def get_faded_bg_image(opacity=0.5):
+    """
+    Loads pdf_bg.png, reduces opacity, and returns bytes.
+    """
+    bg_path = os.path.join(STATIC_DIR, "pdf_bg.png")
+    if not os.path.exists(bg_path):
+        return None
+    
+    try:
+        img = Image.open(bg_path).convert("RGBA")
+        
+        # Reduce opacity
+        alpha = img.split()[3]
+        alpha = ImageEnhance.Brightness(alpha).enhance(opacity)
+        img.putalpha(alpha)
+        
+        output = io.BytesIO()
+        img.save(output, format="PNG")
+        output.seek(0)
+        return output
+    except Exception as e:
+        print(f"Error processing background image: {e}")
+        return None
+
 class StoryPDF(FPDF):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -54,6 +78,11 @@ class StoryPDF(FPDF):
         # 1. Background: purple-50 (RGB 250, 245, 255)
         self.set_fill_color(250, 245, 255)
         self.rect(0, 0, self.w, self.h, style='F')
+
+        # 1b. Image Background (Faded)
+        bg_stream = get_faded_bg_image(opacity=0.5)
+        if bg_stream:
+            self.image(bg_stream, x=0, y=0, w=self.w, h=self.h)
 
         # 2. Decorative Border: Black
         self.set_draw_color(0, 0, 0)
