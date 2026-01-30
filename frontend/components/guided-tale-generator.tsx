@@ -22,10 +22,17 @@ const SCIENTIFIC_TOPICS = {
     "3-5": [
         { value: "shapes_sizes", label: "Tamaños y formas" },
         { value: "human_body", label: "Cuerpo humano" },
+        { value: "feelings", label: "Mis Sentimientos" },
+        { value: "animals", label: "Animales y Naturaleza" },
+        { value: "superheroes", label: "Pequeños Superhéroes" },
     ],
     "5-8": [
-        { value: "sound", label: "Sonido" },
-        { value: "water_changes", label: "Agua y cambios" },
+        { value: "sound", label: "Ciencia del Sonido" },
+        { value: "water_changes", label: "Agua y Estados" },
+        { value: "technology", label: "Tecnología y Robots" },
+        { value: "space", label: "El Espacio Exterior" },
+        { value: "cultures", label: "Culturas del Mundo" },
+        { value: "mysteries", label: "Detectives y Misterios" },
     ],
 }
 
@@ -45,6 +52,34 @@ const MISSIONS = {
     "water_changes": [
         { value: "traveling_drop", label: "La gota viajera" },
         { value: "melting_ice", label: "El hielo que se derrite" },
+    ],
+    "feelings": [
+        { value: "monster_colors", label: "El Monstruo de los Colores" },
+        { value: "grumpy_cloud", label: "La Nube Gruñona" },
+    ],
+    "animals": [
+        { value: "lost_penguin", label: "El Pingüino Perdido" },
+        { value: "vet_day", label: "Veterinario por un día" },
+    ],
+    "superheroes": [
+        { value: "everyday_hero", label: "El Héroe Cotidiano" },
+        { value: "invisible_shield", label: "El Escudo Invisible" },
+    ],
+    "technology": [
+        { value: "internet_travel", label: "Viaje al interior de la Tablet" },
+        { value: "robot_friend", label: "Mi Amigo Robot" },
+    ],
+    "space": [
+        { value: "gravity_boots", label: "Las Botas de Gravedad" },
+        { value: "planet_tour", label: "Tour por los Planetas" },
+    ],
+    "cultures": [
+        { value: "magic_passport", label: "El Pasaporte Mágico" },
+        { value: "food_explorer", label: "Explorador de Sabores" },
+    ],
+    "mysteries": [
+        { value: "museum_thief", label: "El Misterio del Museo" },
+        { value: "secret_code", label: "El Código Secreto" },
     ],
 }
 
