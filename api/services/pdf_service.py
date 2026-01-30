@@ -260,7 +260,22 @@ def generate_story_pdf(story_data: dict) -> bytes:
             except:
                 pdf.set_font('Helvetica', '', 18)
             pdf.set_text_color(0, 0, 0)
-            pdf.multi_cell(0, 10, chap_text) # Increased line height for 18pt font
+            
+            # Calculate text height and center vertically in remaining space
+            text_line_h = 10
+            text_lines = pdf.multi_cell(0, text_line_h, chap_text, split_only=True)
+            text_total_h = len(text_lines) * text_line_h
+            
+            current_y = pdf.get_y()
+            page_bottom = pdf.h - pdf.b_margin  # Available bottom (297 - 25 = 272mm typically)
+            remaining_space = page_bottom - current_y
+            
+            # Only center if text fits in remaining space
+            if text_total_h < remaining_space:
+                top_margin = (remaining_space - text_total_h) / 2
+                pdf.set_y(current_y + top_margin)
+            
+            pdf.multi_cell(0, text_line_h, chap_text)
             
     # --- Last Page: Call to Action ---
     pdf.add_page()
