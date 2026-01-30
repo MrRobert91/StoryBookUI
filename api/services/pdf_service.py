@@ -133,7 +133,7 @@ def generate_story_pdf(story_data: dict) -> bytes:
     except:
         pdf.set_font('Helvetica', 'B', title_font_size)
 
-    h_line = 20
+    h_line = 10  # Reduced line spacing by 50%
     # Calculate height for rounded rectangle
     lines = pdf.multi_cell(0, h_line, title, align='C', split_only=True)
     total_h = len(lines) * h_line
@@ -205,7 +205,7 @@ def generate_story_pdf(story_data: dict) -> bytes:
                 except:
                     pdf.set_font('Helvetica', 'B', chap_title_font_size)
 
-                h_line = 15
+                h_line = 7.5  # Reduced line spacing by 50%
                 lines = pdf.multi_cell(0, h_line, chap_title, align='C', split_only=True)
                 total_h = len(lines) * h_line
 
