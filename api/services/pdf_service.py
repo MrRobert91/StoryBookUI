@@ -261,21 +261,38 @@ def generate_story_pdf(story_data: dict) -> bytes:
                 pdf.set_font('Helvetica', '', 18)
             pdf.set_text_color(0, 0, 0)
             
-            # Calculate text height and center vertically in remaining space
+            # Render text page by page with vertical centering
             text_line_h = 10
-            text_lines = pdf.multi_cell(0, text_line_h, chap_text, split_only=True)
-            text_total_h = len(text_lines) * text_line_h
+            all_lines = pdf.multi_cell(0, text_line_h, chap_text, split_only=True)
             
-            current_y = pdf.get_y()
-            page_bottom = pdf.h - pdf.b_margin  # Available bottom (297 - 25 = 272mm typically)
-            remaining_space = page_bottom - current_y
+            line_idx = 0
+            is_first_text_page = True
             
-            # Only center if text fits in remaining space
-            if text_total_h < remaining_space:
-                top_margin = (remaining_space - text_total_h) / 2
-                pdf.set_y(current_y + top_margin)
-            
-            pdf.multi_cell(0, text_line_h, chap_text)
+            while line_idx < len(all_lines):
+                if not is_first_text_page:
+                    pdf.add_page()
+                
+                current_y = pdf.get_y()
+                page_bottom = pdf.h - pdf.b_margin
+                available_height = page_bottom - current_y
+                
+                # Calculate how many lines fit on this page
+                max_lines_on_page = int(available_height / text_line_h)
+                lines_for_this_page = all_lines[line_idx:line_idx + max_lines_on_page]
+                text_block_h = len(lines_for_this_page) * text_line_h
+                
+                # Center vertically if there's remaining space
+                remaining_space = available_height - text_block_h
+                if remaining_space > 0:
+                    top_margin = remaining_space / 2
+                    pdf.set_y(current_y + top_margin)
+                
+                # Render lines
+                page_text = "\n".join(lines_for_this_page)
+                pdf.multi_cell(0, text_line_h, page_text)
+                
+                line_idx += len(lines_for_this_page)
+                is_first_text_page = False
             
     # --- Last Page: Call to Action ---
     pdf.add_page()
