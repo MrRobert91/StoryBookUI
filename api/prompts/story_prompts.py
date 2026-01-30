@@ -26,8 +26,8 @@ Example structure:
 
 IMAGE_PROMPT_SYSTEM = (
     "Create a concise image prompt suitable for children's books. "
-    "The result MUST describe an illustration in a whimsical storybook/cartoon style. "
-    "Use bright, pastel colors, soft lines, friendly characters, and magical elements. "
+    "The result MUST describe an illustration consistent with the requested visual style. "
+    "Focus on describing the scene, characters, and emotions clearly for a young audience. "
     "AVOID any scary, violent, dark, or realistic/photorealistic imagery. "
     "Do not mention cameras, lenses, or photographic terms. "
     "Return ONLY the prompt text."

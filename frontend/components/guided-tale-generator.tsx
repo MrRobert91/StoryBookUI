@@ -279,6 +279,10 @@ export default function GuidedTaleGenerator() {
                                 <RadioGroupItem value="child_crayons" id="style-child" />
                                 <Label htmlFor="style-child">Dibujo infantil</Label>
                             </div>
+                            <div className="flex items-center space-x-2">
+                                <RadioGroupItem value="illustratio" id="style-illustratio" />
+                                <Label htmlFor="style-illustratio">Ilustración</Label>
+                            </div>
                         </RadioGroup>
                     </div>
 

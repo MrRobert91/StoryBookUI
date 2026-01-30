@@ -4,33 +4,47 @@ from typing import Dict
 # Detailed visual instructions for the Image Generation Model.
 VISUAL_STYLE_PROMPTS: Dict[str, str] = {
     "cartoons": (
-        "Estilo de dibujos animados modernos, vibrantes y coloridos. "
-        "Líneas limpias, colores saturados y expresiones exageradas pero amigables. "
-        "Similar a las series de animación infantil actuales (tipo Bluey o Peppa Pig pero con más detalle). "
-        "Iluminación plana o con sombreado suave cel-shading."
+        "Estilo de dibujos animados vectoriales modernos y de alta calidad. "
+        "Colores planos y vibrantes, líneas de contorno limpias y audaces. "
+        "Diseño de personajes expresivo y 'cute', formas redondeadas y amigables. "
+        "Sin texturas complejas, estéticaminimalista pero detallada en composición. "
+        "Iluminación suave y uniforme, estilo visual similar a aplicaciones educativas modernas."
     ),
     "watercolor": (
-        "Estilo de acuarela suave y soñador. "
-        "Colores pastel, bordes difuminados y texturas de papel visible. "
-        "Un toque artístico y delicado, como los libros de cuentos clásicos ilustrados a mano (tipo Beatrix Potter). "
-        "Atmósfera cálida y acogedora."
+        "Estilo acuarela artística sobre papel de grano grueso texturizado. "
+        "Pinceladas visibles, sangrado de color (color bleeding) y bordes húmedos. "
+        "Colores suaves, translúcidos y etéreos. "
+        "Sin líneas negras duras, las formas se definen por el color y la luz. "
+        "Atmósfera mágica y nostálgica, estilo ilustración de libro de cuentos clásico y atemporal."
     ),
     "3d_animation": (
-        "Estilo de animación 3D renderizada (tipo Pixar o Disney moderno). "
-        "Iluminación volumétrica, texturas detalladas (pelo, tela), profundidad de campo suave. "
-        "Personajes con proporciones agradables, ojos grandes y expresivos. "
-        "Acabado pulido y cinematográfico."
+        "Renderizado 3D estilo cine de animación familiar de alto presupuesto. "
+        "Iluminación global suave, 'subsurface scattering' en piel y materiales. "
+        "Texturas táctiles y realistas (pelo suave, tela, madera pulida) pero con proporciones estilizadas y caricaturescas. "
+        "Colores ricos y cinematográficos, profundidad de campo ligera (bokeh). "
+        "Aspecto de juguete de alta calidad o figura de vinilo, acabado 'RenderMan' perfecto."
     ),
     "anime": (
-        "Estilo anime japonés de alta calidad (tipo Studio Ghibli). "
-        "Colores vibrantes, fondos detallados y pintorescos, personajes con ojos expresivos y estética emocional. "
-        "Iluminación dramática y atmosférica."
+        "Estilo anime clásico de los años 90, líneas limpias y definidas. "
+        "Ojos grandes y expresivos, sombreado suave con celdas (cel shading). "
+        "Estética retro, colores suaves y armoniosos. "
+        "Fondos pintados a mano con detalle, iluminación suave y atmosférica. "
+        "Sombreado tradicional, apariencia de animación clásica japonesa."
     ),
     "child_crayons": (
-        "Dibujo infantil hecho con ceras de colores (crayons) sobre papel texturizado. "
-        "Trazos imperfectos, ingenuos y coloridos. "
-        "Estilo 'garabato' artístico, muy creativo y adorable. "
-        "Fondo de papel blanco o rugoso visible."
+        "Hecho por un niño de 6 años con ceras de colores (crayons). "
+        "Trazos torcidos, gruesos e irregulares. "
+        "Colores saturados, a veces saliéndose de las líneas. "
+        "Estilo infantil, ingenuo y divertido. "
+        "Fondo de papel blanco, formas simples, proporciones imperfectas. "
+        "Perspectiva incorrecta, apariencia genuinamente hecha a mano."
+    ),
+    "illustratio": (
+        "Ilustración editorial de gran calidad y estilo artístico. "
+        "Líneas gordas y expresivas con mucho contraste. "
+        "Paleta de colores sofisticada y vibrante. "
+        "Composición dinámica y texturas ricas. "
+        "Estilo moderno pero con carácter artesanal, ideal para libros de cuentos premium."
     )
 }
 
