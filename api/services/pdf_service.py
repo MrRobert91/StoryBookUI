@@ -136,7 +136,9 @@ def generate_story_pdf(story_data: dict) -> bytes:
     h_line = 10  # Reduced line spacing by 50%
     # Calculate height for rounded rectangle
     lines = pdf.multi_cell(0, h_line, title, align='C', split_only=True)
-    total_h = len(lines) * h_line
+    text_h = len(lines) * h_line
+    padding_v = text_h * 0.25  # 50% extra margin (25% top + 25% bottom)
+    total_h = text_h + (padding_v * 2)
 
     pdf.set_fill_color(255, 255, 255)
     pdf.set_draw_color(0, 0, 0)
@@ -145,10 +147,13 @@ def generate_story_pdf(story_data: dict) -> bytes:
     # Draw rounded rectangle for title background
     # Use full width available (w - 2*margin)
     available_w = pdf.w - 2 * pdf.l_margin
-    pdf.rect(pdf.l_margin, pdf.get_y(), available_w, total_h, style='FD', round_corners=True, corner_radius=10)
+    rect_y = pdf.get_y()
+    pdf.rect(pdf.l_margin, rect_y, available_w, total_h, style='FD', round_corners=True, corner_radius=10)
 
     pdf.set_text_color(0, 0, 0)
+    pdf.set_y(rect_y + padding_v)  # Move text down by padding
     pdf.multi_cell(0, h_line, title, border=0, align='C')
+    pdf.set_y(rect_y + total_h)  # Position after the box
 
     # Reset text styles
     pdf.set_line_width(0.2)
@@ -207,17 +212,22 @@ def generate_story_pdf(story_data: dict) -> bytes:
 
                 h_line = 7.5  # Reduced line spacing by 50%
                 lines = pdf.multi_cell(0, h_line, chap_title, align='C', split_only=True)
-                total_h = len(lines) * h_line
+                text_h = len(lines) * h_line
+                padding_v = text_h * 0.25  # 50% extra margin (25% top + 25% bottom)
+                total_h = text_h + (padding_v * 2)
 
                 pdf.set_fill_color(255, 255, 255)
                 pdf.set_draw_color(0, 0, 0)
                 pdf.set_line_width(2.5)
 
                 # Full width
-                pdf.rect(pdf.l_margin, pdf.get_y(), available_w, total_h, style='FD', round_corners=True, corner_radius=8)
+                rect_y = pdf.get_y()
+                pdf.rect(pdf.l_margin, rect_y, available_w, total_h, style='FD', round_corners=True, corner_radius=8)
 
                 pdf.set_text_color(0, 0, 0)
+                pdf.set_y(rect_y + padding_v)  # Move text down by padding
                 pdf.multi_cell(0, h_line, chap_title, border=0, align='C')
+                pdf.set_y(rect_y + total_h)  # Position after the box
                 pdf.ln(10)
             
             # Chapter Image
