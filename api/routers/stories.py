@@ -163,7 +163,7 @@ class GuidedStoryRequest(BaseModel):
     scientific_topic: str
     mission: str
     visual_style: str
-    num_chapters: int = 3
+    num_chapters: int
 
 from api.prompts.guided_story_prompts import VISUAL_STYLE_PROMPTS, TOPIC_PROMPTS, MISSION_PROMPTS
 

@@ -94,10 +94,15 @@ def generate_story_pdf(story_data: dict) -> bytes:
     pdf.ln(20)
     
     # Title Typography
+    # Title Typography
+    title_font_size = 32
+    if len(title) > 23:
+        title_font_size -= 4
+
     try:
-        pdf.set_font('OpenDyslexic', 'B', 36)
+        pdf.set_font('OpenDyslexic', 'B', title_font_size)
     except:
-        pdf.set_font('Helvetica', 'B', 36)
+        pdf.set_font('Helvetica', 'B', title_font_size)
 
     h_line = 20
     # Calculate height for rounded rectangle
@@ -162,10 +167,14 @@ def generate_story_pdf(story_data: dict) -> bytes:
             
             # Chapter Title
             if chap_title:
+                chap_title_font_size = 24
+                if len(chap_title) > 23:
+                    chap_title_font_size -= 4
+
                 try:
-                    pdf.set_font('OpenDyslexic', 'B', 24)
+                    pdf.set_font('OpenDyslexic', 'B', chap_title_font_size)
                 except:
-                    pdf.set_font('Helvetica', 'B', 24)
+                    pdf.set_font('Helvetica', 'B', chap_title_font_size)
 
                 h_line = 15
                 lines = pdf.multi_cell(0, h_line, chap_title, align='C', split_only=True)
