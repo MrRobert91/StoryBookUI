@@ -53,18 +53,6 @@ export default function StoryViewer({ chapters, title }: StoryViewerProps) {
 
           <div className="flex gap-4 pt-4 border-t">
             <button
-              className="px-4 py-2 border border-gray-300 rounded-md text-gray-700 hover:bg-gray-50 transition-colors"
-              onClick={() => console.log("Save story")}
-            >
-              Save Story
-            </button>
-            <button
-              className="px-4 py-2 border border-gray-300 rounded-md text-gray-700 hover:bg-gray-50 transition-colors"
-              onClick={() => console.log("Share story")}
-            >
-              Share
-            </button>
-            <button
               onClick={() => window.location.reload()}
               className="px-4 py-2 border border-gray-300 rounded-md text-gray-700 hover:bg-gray-50 transition-colors"
             >
@@ -93,18 +81,6 @@ export default function StoryViewer({ chapters, title }: StoryViewerProps) {
         </div>
 
         <div className="flex gap-4 pt-4 border-t">
-          <button
-            className="px-4 py-2 border border-gray-300 rounded-md text-gray-700 hover:bg-gray-50 transition-colors"
-            onClick={() => console.log("Save story")}
-          >
-            Save Story
-          </button>
-          <button
-            className="px-4 py-2 border border-gray-300 rounded-md text-gray-700 hover:bg-gray-50 transition-colors"
-            onClick={() => console.log("Share story")}
-          >
-            Share
-          </button>
           <button
             onClick={() => window.location.reload()}
             className="px-4 py-2 border border-gray-300 rounded-md text-gray-700 hover:bg-gray-50 transition-colors"
