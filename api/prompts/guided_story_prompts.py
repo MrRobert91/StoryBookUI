@@ -28,7 +28,8 @@ VISUAL_STYLE_PROMPTS: Dict[str, str] = {
         "Estilo anime clásico de los años 90, líneas limpias y definidas. "
         "Ojos grandes y expresivos, sombreado suave con celdas (cel shading). "
         "Estética retro, colores suaves y armoniosos. "
-        "Fondos pintados a mano con detalle, iluminación suave y atmosférica. "
+        "Fondos pintados a mano, iluminación suave y atmosférica. "
+        "calidad de anime en VHS,"
         "Sombreado tradicional, apariencia de animación clásica japonesa."
     ),
     "child_crayons": (
