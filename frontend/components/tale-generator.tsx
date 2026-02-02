@@ -240,6 +240,23 @@ export default function TaleGenerator() {
             </CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
+            <div className="space-y-2">
+              <span className="text-sm font-medium text-gray-700">Dictation Language</span>
+              <select
+                className="flex h-10 w-full items-center justify-between rounded-md border border-input bg-background px-3 py-2 text-sm text-gray-900 ring-offset-background placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+                value={dictationLanguage}
+                onChange={(e) => setDictationLanguage(e.target.value)}
+                disabled={isGeneratingAsync || authLoading || isRecording}
+              >
+                <option value="en">English</option>
+                <option value="es">Español</option>
+                <option value="fr">Français</option>
+                <option value="pt">Português</option>
+                <option value="it">Italiano</option>
+                <option value="de">Deutsch</option>
+              </select>
+            </div>
+
             <div className="relative">
               <Textarea
                 placeholder="Describe your story idea... For example: 'A brave princess who befriends a friendly dragon and goes on an adventure to save her village from a magical storm'"
@@ -262,23 +279,6 @@ export default function TaleGenerator() {
               >
                 {isRecording ? <MicOff className="h-5 w-5" /> : <Mic className="h-5 w-5" />}
               </button>
-            </div>
-
-            <div className="space-y-2">
-              <span className="text-sm font-medium text-gray-700">Dictation Language</span>
-              <select
-                className="flex h-10 w-full items-center justify-between rounded-md border border-input bg-background px-3 py-2 text-sm text-gray-900 ring-offset-background placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
-                value={dictationLanguage}
-                onChange={(e) => setDictationLanguage(e.target.value)}
-                disabled={isGeneratingAsync || authLoading || isRecording}
-              >
-                <option value="en">English</option>
-                <option value="es">Español</option>
-                <option value="fr">Français</option>
-                <option value="pt">Português</option>
-                <option value="it">Italiano</option>
-                <option value="de">Deutsch</option>
-              </select>
             </div>
 
             {/* Chapter Length Selector */}
