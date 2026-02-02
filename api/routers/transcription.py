@@ -21,10 +21,12 @@ logger = logging.getLogger(__name__)
 class StreamGenerator:
     """
     Puente entre la entrada asíncrona del WebSocket (escritor de cola)
-    y el cliente síncrono de Speechmatics (lector iterador).
+    y el cliente síncrono de Speechmatics (lector tipo archivo).
+    Implementa read() para compatibilidad con speechmatics-python.
     """
     def __init__(self):
         self._queue = queue.Queue()
+        self._buffer = bytearray()
         self._ended = False
 
     def add_chunk(self, chunk: bytes):
@@ -33,6 +35,41 @@ class StreamGenerator:
     def close(self):
         self._ended = True
         self._queue.put(None)  # Sentinel to unblock
+
+    def read(self, size=-1):
+        """
+        Lee datos del buffer/cola.
+        Si size == -1, lee todo lo disponible (pero bloquea si no hay nada hasta tener algo).
+        Si size > 0, lee hasta size bytes.
+        Devuelve b"" solo en EOF.
+        """
+        if self._ended and not self._buffer:
+            return b""
+
+        # Si el buffer está vacío y no hemos terminado, bloqueamos esperando al menos un chunk
+        if not self._buffer and not self._ended:
+            try:
+                chunk = self._queue.get()
+                if chunk is None:
+                    self._ended = True
+                    return b""
+                self._buffer.extend(chunk)
+            except Exception:
+                pass
+
+        if size == -1:
+            # Retornar todo lo que haya en buffer
+            data = bytes(self._buffer)
+            self._buffer.clear()
+            return data
+
+        # Retornar hasta 'size' bytes
+        # Nota: Retornamos lo que tengamos, aunque sea menos que 'size',
+        # para mantener baja latencia, a menos que sea 0.
+        read_len = min(len(self._buffer), size)
+        data = self._buffer[:read_len]
+        self._buffer = self._buffer[read_len:]
+        return bytes(data)
 
     def __iter__(self):
         return self
