@@ -53,7 +53,7 @@ CREATE TRIGGER update_stories_updated_at
 -- Create profiles table for storing user-specific data like credits and plan
 CREATE TABLE IF NOT EXISTS profiles (
   id UUID REFERENCES auth.users(id) ON DELETE CASCADE PRIMARY KEY,
-  credits INTEGER NOT NULL DEFAULT 10,
+  credits INTEGER NOT NULL DEFAULT 5,
   plan TEXT NOT NULL DEFAULT 'free', -- 'free' or 'plus'
   plus_since TIMESTAMP WITH TIME ZONE, -- Date when user subscribed to 'plus' plan
   last_credited_at TIMESTAMP WITH TIME ZONE, -- Last time credits were automatically added
