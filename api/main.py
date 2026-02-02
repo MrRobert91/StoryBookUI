@@ -6,7 +6,7 @@ import redis
 from datetime import datetime, timezone, timedelta
 
 from api.core import config
-from api.routers import stories, tasks
+from api.routers import stories, tasks, transcription
 from api.services.supabase_client import service_supabase_client
 
 # Configuración del logging
@@ -32,6 +32,8 @@ app.add_middleware(
 # Inclusión de los routers
 app.include_router(stories.router, prefix="/stories", tags=["Stories"])
 app.include_router(tasks.router, prefix="/tasks", tags=["Tasks"])
+app.include_router(transcription.router, prefix="/transcription", tags=["Transcription"])
+
 
 
 async def refill_plus_credits():

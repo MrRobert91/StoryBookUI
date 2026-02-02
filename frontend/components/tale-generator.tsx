@@ -3,7 +3,7 @@
 import { useState, useEffect, useRef } from "react"
 import { Textarea } from "@/components/ui/textarea"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { Sparkles, Loader2, AlertCircle, Check, Lock } from "lucide-react"
+import { Sparkles, Loader2, AlertCircle, Check, Lock, Mic, MicOff } from "lucide-react"
 import StoryViewer from "./story-viewer"
 import { supabase, isSupabaseConfigured } from "@/lib/supabase/client"
 import { useAuth } from "@/components/auth-provider"
@@ -38,9 +38,14 @@ export default function TaleGenerator() {
   const [saveError, setSaveError] = useState<string | null>(null)
   const [showNoCreditsModal, setShowNoCreditsModal] = useState(false)
 
+  // Recording states
+  const [isRecording, setIsRecording] = useState(false)
+  const mediaRecorderRef = useRef<MediaRecorder | null>(null)
+  const socketRef = useRef<WebSocket | null>(null)
+
   const asyncStorySavedRef = useRef(false)
 
-  const fastApiUrl = process.env.NEXT_PUBLIC_FASTAPI_URL
+  const fastApiUrl = process.env.NEXT_PUBLIC_FASTAPI_URL || "http://localhost:8000"
 
   const resetStoryStates = () => {
     setAiStory(null)
@@ -50,6 +55,118 @@ export default function TaleGenerator() {
     setSaveError(null)
     setShowNoCreditsModal(false)
   }
+
+  const appendText = (text: string) => {
+    setPrompt((prev) => {
+      const prefix = prev.trim().length > 0 ? " " : ""
+      return prev + prefix + text
+    })
+  }
+
+  const toggleRecording = async () => {
+    if (isRecording) {
+      stopRecording()
+    } else {
+      await startRecording()
+    }
+  }
+
+  const startRecording = async () => {
+    try {
+      if (!user) {
+        setApiError("Authentication required for voice input.")
+        return
+      }
+
+      // Check for session to get token
+      const { data: { session } } = await supabase.auth.getSession()
+      if (!session?.access_token) {
+        setApiError("Session expired. Please log in again.")
+        return
+      }
+
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true })
+      
+      // Determine WebSocket URL (handling http/https vs ws/wss)
+      const wsProtocol = fastApiUrl.startsWith("https") ? "wss" : "ws"
+      const wsHost = fastApiUrl.replace(/^https?:\/\//, "")
+      const wsUrl = `${wsProtocol}://${wsHost}/transcription/transcribe?token=${session.access_token}`
+      
+      console.log("Connecting to WS:", wsUrl) // Debug log
+      const ws = new WebSocket(wsUrl)
+      
+      ws.onopen = () => {
+        console.log("WebSocket Connected")
+        const recorder = new MediaRecorder(stream, { mimeType: 'audio/webm' })
+        
+        recorder.ondataavailable = (event) => {
+          if (event.data.size > 0 && ws.readyState === WebSocket.OPEN) {
+            ws.send(event.data)
+          }
+        }
+
+        recorder.start(250) // Send chunks every 250ms
+        mediaRecorderRef.current = recorder
+        setIsRecording(true)
+        setApiError(null)
+      }
+
+      ws.onmessage = (event) => {
+        try {
+          const response = JSON.parse(event.data)
+          if (response.type === 'final') {
+             appendText(response.text)
+          }
+          // Currently ignoring partials to avoid janky text updates, 
+          // can enable later if we add a 'preview' text area.
+        } catch (e) {
+          console.error("Error parsing WS message", e)
+        }
+      }
+
+      ws.onerror = (e) => {
+        console.error("WebSocket error:", e)
+        setApiError("Error connecting to transcription service.")
+        stopRecording()
+      }
+
+      ws.onclose = () => {
+        console.log("WebSocket Disconnected")
+        if (isRecording) {
+            stopRecording() // Ensure UI updates if server closes connection
+        }
+      }
+
+      socketRef.current = ws
+    } catch (err) {
+      console.error("Error accessing microphone:", err)
+      setApiError("Could not access microphone. Please check permissions.")
+      setIsRecording(false)
+    }
+  }
+
+  const stopRecording = () => {
+    if (mediaRecorderRef.current && mediaRecorderRef.current.state !== 'inactive') {
+      mediaRecorderRef.current.stop()
+      mediaRecorderRef.current.stream.getTracks().forEach(track => track.stop())
+    }
+    if (socketRef.current) {
+      // Avoid calling close if already closed to prevent errors
+      if (socketRef.current.readyState === WebSocket.OPEN || socketRef.current.readyState === WebSocket.CONNECTING) {
+        socketRef.current.close()
+      }
+    }
+    setIsRecording(false)
+    mediaRecorderRef.current = null
+    socketRef.current = null
+  }
+
+  // Cleanup on unmount
+  useEffect(() => {
+    return () => {
+        stopRecording()
+    }
+  }, [])
 
   useEffect(() => {
     if (asyncStoryData && asyncStoryData.chapters && Array.isArray(asyncStoryData.chapters)) {
@@ -122,14 +239,29 @@ export default function TaleGenerator() {
             </CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
-            <Textarea
-              placeholder="Describe your story idea... For example: 'A brave princess who befriends a friendly dragon and goes on an adventure to save her village from a magical storm'"
-              value={prompt}
-              onChange={(e) => setPrompt(e.target.value)}
-              rows={4}
-              className="resize-none"
-              disabled={isGeneratingAsync || authLoading}
-            />
+            <div className="relative">
+              <Textarea
+                placeholder="Describe your story idea... For example: 'A brave princess who befriends a friendly dragon and goes on an adventure to save her village from a magical storm'"
+                value={prompt}
+                onChange={(e) => setPrompt(e.target.value)}
+                rows={4}
+                className="resize-none pr-12"
+                disabled={isGeneratingAsync || authLoading}
+              />
+              <button
+                onClick={toggleRecording}
+                className={`absolute bottom-3 right-3 p-2 rounded-full transition-all duration-200 shadow-sm ${
+                  isRecording 
+                    ? "bg-red-100 text-red-600 hover:bg-red-200 animate-pulse ring-2 ring-red-400" 
+                    : "bg-gray-100 text-gray-500 hover:bg-gray-200 hover:text-purple-600"
+                }`}
+                title={isRecording ? "Stop Recording" : "Start Voice Input"}
+                type="button"
+                disabled={isGeneratingAsync || authLoading}
+              >
+                {isRecording ? <MicOff className="h-5 w-5" /> : <Mic className="h-5 w-5" />}
+              </button>
+            </div>
 
             {/* Chapter Length Selector */}
             <div className="space-y-2">
