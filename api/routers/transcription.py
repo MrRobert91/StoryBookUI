@@ -95,7 +95,14 @@ async def websocket_transcription(
         return
 
     CONNECTION_URL = "wss://eu.rt.speechmatics.com/v2"
-    LANGUAGE = "en" 
+    supported_languages = {"es", "en", "fr", "pt", "it", "de"}
+    requested_lang = (websocket.query_params.get("lang") or "").strip().lower()
+    if requested_lang and requested_lang in supported_languages:
+        language = requested_lang
+    else:
+        if requested_lang:
+            logger.warning("Unsupported language '%s', defaulting to 'en'", requested_lang)
+        language = "en"
 
     # Configuración del puente y loop principal
     stream = StreamGenerator()
@@ -133,10 +140,10 @@ async def websocket_transcription(
     # operating_point="enhanced" para mejor calidad
     # enable_partials=True para feedback en tiempo real
     conf = TranscriptionConfig(
-        language=LANGUAGE,
-        operating_point="enhanced", 
-        enable_partials=True, 
-        max_delay=2 
+        language=language,
+        operating_point="enhanced",
+        enable_partials=True,
+        max_delay=2.0
     )
     
     # Speechmatics maneja raw streams si vienen correctamente codificados, 

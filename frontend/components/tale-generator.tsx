@@ -31,6 +31,7 @@ export default function TaleGenerator() {
   const [storyTitle, setStoryTitle] = useState<string | null>(null)
   const [numChapters, setNumChapters] = useState("3")
   const [visualStyle, setVisualStyle] = useState("cartoons")
+  const [dictationLanguage, setDictationLanguage] = useState("en")
 
   const [apiError, setApiError] = useState<string | null>(null)
   const [isSaving, setIsSaving] = useState(false)
@@ -90,7 +91,7 @@ export default function TaleGenerator() {
       // Determine WebSocket URL (handling http/https vs ws/wss)
       const wsProtocol = fastApiUrl.startsWith("https") ? "wss" : "ws"
       const wsHost = fastApiUrl.replace(/^https?:\/\//, "")
-      const wsUrl = `${wsProtocol}://${wsHost}/transcription/transcribe?token=${session.access_token}`
+      const wsUrl = `${wsProtocol}://${wsHost}/transcription/transcribe?token=${session.access_token}&lang=${encodeURIComponent(dictationLanguage)}`
       
       console.log("Connecting to WS:", wsUrl) // Debug log
       const ws = new WebSocket(wsUrl)
@@ -261,6 +262,23 @@ export default function TaleGenerator() {
               >
                 {isRecording ? <MicOff className="h-5 w-5" /> : <Mic className="h-5 w-5" />}
               </button>
+            </div>
+
+            <div className="space-y-2">
+              <span className="text-sm font-medium text-gray-700">Dictation Language</span>
+              <select
+                className="flex h-10 w-full items-center justify-between rounded-md border border-input bg-background px-3 py-2 text-sm text-gray-900 ring-offset-background placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+                value={dictationLanguage}
+                onChange={(e) => setDictationLanguage(e.target.value)}
+                disabled={isGeneratingAsync || authLoading || isRecording}
+              >
+                <option value="en">English</option>
+                <option value="es">Español</option>
+                <option value="fr">Français</option>
+                <option value="pt">Português</option>
+                <option value="it">Italiano</option>
+                <option value="de">Deutsch</option>
+              </select>
             </div>
 
             {/* Chapter Length Selector */}
