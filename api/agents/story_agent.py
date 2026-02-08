@@ -103,6 +103,8 @@ def story_generation_node(state: StoryState):
             raise ValueError("Failed to generate valid story structure")
         
         logger.info(f"Story generated: {story.title}, {len(story.chapters)} chapters")
+        story.story_type = state.get("story_type", "open")
+        story.metadata = state.get("metadata", {})
         return {"story_data": story}
         
     except Exception as e:
@@ -154,6 +156,8 @@ def image_generation_node(state: StoryState):
     final_output = story.model_dump()
     final_output["story_id"] = story_id
     final_output["user_id"] = user_id
+    final_output["story_type"] = story.story_type
+    final_output["metadata"] = story.metadata
     
     logger.info("All images generated and uploaded to Supabase Storage")
     return {"final_output": final_output}

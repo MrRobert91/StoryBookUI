@@ -7,6 +7,7 @@ import { storyOperations, type Story, type PaginatedStoriesResult } from "@/lib/
 import { BookOpen, Calendar, User, Loader2, AlertCircle, ChevronLeft, ChevronRight, Eye } from "lucide-react"
 import StoryModal from "@/components/story-modal"
 import { getStoryPreview, getCoverImage } from "@/components/story-preview"
+import StoryMetadata from "@/components/story-metadata"
 
 const ITEMS_PER_PAGE_OPTIONS = [12, 24, 48, 96]
 
@@ -198,10 +199,12 @@ export default function GalleryPage() {
                         />
                       </div>
                     )}
-                    {story.prompt && (
-                      <p className="text-purple-600 text-xs mb-3 italic">"{truncateContent(story.prompt, 80)}"</p>
-                    )}
-                    <p className="text-gray-700 text-sm leading-relaxed mb-4 line-clamp-4">
+                    <StoryMetadata
+                      storyType={story.story_type}
+                      metadata={story.metadata}
+                      prompt={story.story_type === "guided" ? undefined : story.prompt}
+                    />
+                    <p className="text-gray-700 text-sm leading-relaxed mb-4 line-clamp-4 mt-2">
                       {truncateContent(getStoryPreview(story.content))}
                     </p>
                     <button

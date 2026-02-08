@@ -148,6 +148,8 @@ class Story(BaseModel):
     title: str = Field(description="Story title")
     cover_image_url: str | None = Field(default=None, description="URL of cover image")
     chapters: List[Chapter] = Field(description="List of story chapters")
+    story_type: str = Field(default="open", description="Type of story: open or guided")
+    metadata: dict = Field(default_factory=dict, description="Metadata parameters used to build the story")
 
 class StoryState(TypedDict):
     messages: list
@@ -158,6 +160,8 @@ class StoryState(TypedDict):
     model: str | None
     image_style_context: str | None
     num_chapters: int | None
+    story_type: str | None
+    metadata: dict | None
 
 # ============================================================================
 # IMAGE GENERATION LOGIC

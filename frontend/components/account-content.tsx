@@ -9,6 +9,7 @@ import StoryModal from "./story-modal"
 import StripeModal from "./stripe-modal"
 import { Loader2, Edit2, Check, X, Globe, Lock, ChevronLeft, ChevronRight } from "lucide-react"
 import { getStoryPreview, getCoverImage } from "./story-preview"
+import StoryMetadata from "./story-metadata"
 
 interface AccountContentProps {
   user: User
@@ -439,12 +440,12 @@ export default function AccountContent({ user }: AccountContentProps) {
                         />
                       </div>
                     )}
-                    {story.prompt && (
-                      <p className="text-xs text-purple-600 mb-2 italic">
-                        "{truncateContent(story.prompt, 80)}"
-                      </p>
-                    )}
-                    <p className="text-sm text-gray-600 mb-3 line-clamp-2">
+                    <StoryMetadata
+                      storyType={story.story_type}
+                      metadata={story.metadata}
+                      prompt={story.story_type === "guided" ? undefined : story.prompt}
+                    />
+                    <p className="text-sm text-gray-600 mb-3 line-clamp-2 mt-2">
                       {typeof story.content === "string"
                         ? truncateContent(getStoryPreview(story.content))
                         : "Generated story"}

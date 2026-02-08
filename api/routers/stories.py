@@ -14,6 +14,7 @@ class StoryRequest(BaseModel):
     topic: str
     num_chapters: int = 3
     visual_style: str | None = None
+    language: str | None = "Spanish"
 
 # --- Endpoints ---
 
@@ -38,7 +39,13 @@ async def generate_story_async(request: StoryRequest, user: UserProfile = Depend
             jwt_token=user.token,
             model=None,
             num_chapters=request.num_chapters,
-            image_style_context=image_style_context
+            image_style_context=image_style_context,
+            story_type="open",
+            metadata={
+                "language": request.language,
+                "story_length": request.num_chapters,
+                "artistic_style": request.visual_style
+            }
         )
         return {"task_id": task.id, "status": "processing"}
     except Exception as e:
@@ -116,7 +123,18 @@ async def generate_guided_story_async(req: GuidedStoryRequest, user: UserProfile
             jwt_token=user.token,
             model=None,
             image_style_context=image_style_context,
-            num_chapters=req.num_chapters
+            num_chapters=req.num_chapters,
+            story_type="guided",
+            metadata={
+                "age_group": req.age_group,
+                "story_length": req.num_chapters,
+                "protagonist_name": protag_name,
+                "protagonist_description": protag_desc,
+                "scientific": True, # Based on endpoint purpose
+                "topic": req.scientific_topic,
+                "mission": req.mission,
+                "visual_style": req.visual_style
+            }
         )
         return {"task_id": task.id, "status": "processing"}
     except Exception as e:

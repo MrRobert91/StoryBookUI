@@ -7,6 +7,7 @@ import { X, Trash2, ChevronDown, ChevronUp, Download } from "lucide-react"
 import type { Story } from "@/lib/supabase/stories"
 import MarkdownRenderer from "./markdown-renderer"
 import { getPdfUrl } from "./story-preview"
+import StoryMetadata from "./story-metadata"
 
 interface StoryModalProps {
   story: Story
@@ -47,23 +48,12 @@ export default function StoryModal({ story, onClose, onDelete }: StoryModalProps
             <p className="text-gray-600 text-sm mt-1">
               Created by <span className="font-medium text-purple-700">{story.profiles?.username || "Anonymous"}</span> on {formatDate(story.created_at)}
             </p>
-            {story.prompt && (
-              <div className="mt-2">
-                <button
-                  onClick={() => setIsPromptExpanded(!isPromptExpanded)}
-                  className="flex items-center gap-1 text-sm font-medium text-gray-900 hover:text-purple-600 transition-colors"
-                >
-                  Original Prompt
-                  {isPromptExpanded ? <ChevronUp className="h-3 w-3" /> : <ChevronDown className="h-3 w-3" />}
-                </button>
-                <div
-                  className={`text-purple-600 text-sm mt-1 transition-all duration-200 ${isPromptExpanded ? "" : "line-clamp-1"
-                    }`}
-                >
-                  {story.prompt}
-                </div>
-              </div>
-            )}
+            <StoryMetadata
+              storyType={story.story_type}
+              metadata={story.metadata}
+              prompt={story.story_type === "guided" ? undefined : story.prompt}
+              className="mt-3"
+            />
           </div>
           <button onClick={onClose} className="p-2 hover:bg-gray-100 rounded-full transition-colors self-start">
             <X className="h-6 w-6 text-gray-500" />

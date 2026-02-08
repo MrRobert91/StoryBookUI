@@ -21,7 +21,7 @@ else:
     logger.warning("⚠️ SUPABASE CREDENTIALS NOT FOUND. Database operations will fail.")
 
 @celery_app.task(bind=True, name="generate_story_task")
-def generate_story_task(self, topic: str, user_id: str, jwt_token: str, model: str | None = None, image_style_context: str | None = None, num_chapters: int | None = None):
+def generate_story_task(self, topic: str, user_id: str, jwt_token: str, model: str | None = None, image_style_context: str | None = None, num_chapters: int | None = None, story_type: str = "open", metadata: dict = None):
     task_id = self.request.id
     logger.info(f" [Task {task_id}] RECEIVED by worker.")
     logger.info(f" [Task {task_id}] INPUT -> User: {user_id} | Topic: '{topic}' | Model: {model} | Style Context: {bool(image_style_context)} | Chapters: {num_chapters}")
@@ -35,7 +35,9 @@ def generate_story_task(self, topic: str, user_id: str, jwt_token: str, model: s
             "jwt_token": jwt_token,
             "model": model,
             "image_style_context": image_style_context,
-            "num_chapters": num_chapters
+            "num_chapters": num_chapters,
+            "story_type": story_type,
+            "metadata": metadata or {}
         })
         
         story_data = result.get("story_data")
@@ -103,6 +105,8 @@ def generate_story_task(self, topic: str, user_id: str, jwt_token: str, model: s
                     "title": title,
                     "content": json.dumps(story_json),
                     "prompt": topic,
+                    "story_type": story_type,
+                    "metadata": metadata or {}
                 }).execute()
                 
                 logger.info(f" [Task {task_id}] Story saved to DB. ID: {db_response.data[0].get('id') if db_response.data else 'Unknown'}")

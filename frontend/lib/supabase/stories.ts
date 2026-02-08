@@ -6,7 +6,10 @@ export interface Story {
   title: string
   content: string
   prompt?: string
+  story_type?: "open" | "guided"
+  metadata?: Record<string, any>
   visibility: "public" | "private"
+
   created_at: string
   updated_at: string
   profiles?: {

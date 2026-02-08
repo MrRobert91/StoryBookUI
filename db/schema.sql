@@ -5,7 +5,10 @@ CREATE TABLE IF NOT EXISTS stories (
   title TEXT NOT NULL,
   content TEXT NOT NULL,
   prompt TEXT,
+  story_type TEXT DEFAULT 'open', -- 'open' or 'guided'
+  metadata JSONB DEFAULT '{}',
   created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+
   updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
 
