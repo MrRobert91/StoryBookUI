@@ -5,6 +5,7 @@ import type { User } from "@supabase/supabase-js"
 import { supabase } from "@/lib/supabase/client"
 import { profileOperations, type UserProfile } from "@/lib/supabase/profile-operations"
 import { storyOperations, type Story, type PaginatedStoriesResult } from "@/lib/supabase/stories"
+import { useLanguage } from "./language-context"
 import StoryModal from "./story-modal"
 import StripeModal from "./stripe-modal"
 import { Loader2, Edit2, Check, X, Globe, Lock, ChevronLeft, ChevronRight } from "lucide-react"
@@ -16,6 +17,7 @@ interface AccountContentProps {
 }
 
 export default function AccountContent({ user }: AccountContentProps) {
+  const { t } = useLanguage()
   const [profile, setProfile] = useState<UserProfile | null>(null)
   const [storiesData, setStoriesData] = useState<PaginatedStoriesResult | null>(null)
   const [loading, setLoading] = useState(true)
@@ -64,7 +66,7 @@ export default function AccountContent({ user }: AccountContentProps) {
       setUsernameStatus({
         checking: false,
         available: false,
-        error: "Username must be 3-20 characters, lowercase letters, numbers, dots and underscores only",
+        error: t("account.username_error_format"),
       })
       return
     }
@@ -73,7 +75,7 @@ export default function AccountContent({ user }: AccountContentProps) {
       setUsernameStatus({
         checking: false,
         available: false,
-        error: "Username cannot start/end with . or _ or have consecutive . or _",
+        error: t("account.username_error_pattern"),
       })
       return
     }
@@ -94,7 +96,7 @@ export default function AccountContent({ user }: AccountContentProps) {
           setUsernameStatus({
             checking: false,
             available,
-            error: available ? null : "Username is already taken",
+            error: available ? null : t("account.username_error_taken"),
           })
         }
       } catch (error) {
@@ -107,7 +109,7 @@ export default function AccountContent({ user }: AccountContentProps) {
     }, 500) // 500ms debounce
 
     return () => clearTimeout(timeoutId)
-  }, [newUsername, editingUsername, profile?.username])
+  }, [newUsername, editingUsername, profile?.username, t])
 
   const loadProfile = async () => {
     try {
@@ -166,7 +168,7 @@ export default function AccountContent({ user }: AccountContentProps) {
       const { data, error } = await profileOperations.updateUsername(profile.id, newUsername)
       if (error) {
         console.error("Error updating username:", error)
-        alert("Error updating username. Please try again.")
+        alert(t("common.error"))
       } else {
         setProfile(data)
         setEditingUsername(false)
@@ -174,7 +176,7 @@ export default function AccountContent({ user }: AccountContentProps) {
       }
     } catch (error) {
       console.error("Error updating username:", error)
-      alert("Error updating username. Please try again.")
+      alert(t("common.error"))
     }
   }
 
@@ -200,7 +202,7 @@ export default function AccountContent({ user }: AccountContentProps) {
 
       if (error) {
         console.error("Error updating story visibility:", error)
-        alert("Error updating story visibility. Please try again.")
+        alert(t("account.visibility_error"))
       } else {
         // Update the story in the local state
         setStoriesData((prevData) => {
@@ -213,7 +215,7 @@ export default function AccountContent({ user }: AccountContentProps) {
       }
     } catch (error) {
       console.error("Error updating story visibility:", error)
-      alert("Error updating story visibility. Please try again.")
+      alert(t("account.visibility_error"))
     }
   }
 
@@ -223,7 +225,7 @@ export default function AccountContent({ user }: AccountContentProps) {
 
       if (error) {
         console.error("Error deleting story:", error)
-        alert("Error deleting story. Please try again.")
+        alert(t("account.delete_error"))
         return false
       } else {
         // Reload stories to start fresh with pagination
@@ -232,7 +234,7 @@ export default function AccountContent({ user }: AccountContentProps) {
       }
     } catch (error) {
       console.error("Error deleting story:", error)
-      alert("Error deleting story. Please try again.")
+      alert(t("account.delete_error"))
       return false
     }
   }
@@ -244,7 +246,7 @@ export default function AccountContent({ user }: AccountContentProps) {
 
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
+      <div className="flex items-center justify-center py-24">
         <Loader2 className="h-8 w-8 animate-spin text-purple-600" />
       </div>
     )
@@ -256,25 +258,25 @@ export default function AccountContent({ user }: AccountContentProps) {
         {/* Profile Section */}
         <div className="bg-white rounded-lg shadow-sm p-6 mb-8">
           <div className="flex items-center justify-between mb-6">
-            <h1 className="text-2xl font-bold text-gray-900">My Account</h1>
+            <h1 className="text-2xl font-bold text-gray-900">{t("account.title")}</h1>
             <button
               onClick={handleSignOut}
               className="px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 rounded-md hover:bg-gray-200 transition-colors"
             >
-              Sign Out
+              {t("account.sign_out")}
             </button>
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <div>
-              <h2 className="text-lg font-semibold text-gray-900 mb-4">Profile Information</h2>
+              <h2 className="text-lg font-semibold text-gray-900 mb-4">{t("account.profile_info")}</h2>
               <div className="space-y-4">
                 <div>
-                  <label className="block text-sm font-medium text-gray-700">Email</label>
+                  <label className="block text-sm font-medium text-gray-700">{t("account.email")}</label>
                   <p className="mt-1 text-sm text-gray-900">{user.email}</p>
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700">Username</label>
+                  <label className="block text-sm font-medium text-gray-700">{t("account.username")}</label>
                   {editingUsername ? (
                     <div className="mt-1 space-y-2">
                       <div className="relative">
@@ -301,7 +303,7 @@ export default function AccountContent({ user }: AccountContentProps) {
                       </div>
                       {usernameStatus.error && <p className="text-xs text-red-600">{usernameStatus.error}</p>}
                       {usernameStatus.available === true && (
-                        <p className="text-xs text-green-600">Username is available!</p>
+                        <p className="text-xs text-green-600">{t("account.username_available")}</p>
                       )}
                       <div className="flex space-x-2">
                         <button
@@ -309,19 +311,19 @@ export default function AccountContent({ user }: AccountContentProps) {
                           disabled={usernameStatus.available !== true}
                           className="px-3 py-1 text-sm bg-green-600 text-white rounded hover:bg-green-700 disabled:bg-gray-400"
                         >
-                          Save
+                          {t("account.save")}
                         </button>
                         <button
                           onClick={handleUsernameCancel}
                           className="px-3 py-1 text-sm bg-gray-600 text-white rounded hover:bg-gray-700"
                         >
-                          Cancel
+                          {t("account.cancel")}
                         </button>
                       </div>
                     </div>
                   ) : (
                     <div className="mt-1 flex items-center space-x-2">
-                      <p className="text-sm text-gray-900">{profile?.username || "Not set"}</p>
+                      <p className="text-sm text-gray-900">{profile?.username || t("account.not_set")}</p>
                       <button
                         onClick={handleUsernameEdit}
                         className="text-purple-600 hover:text-purple-700"
@@ -336,22 +338,22 @@ export default function AccountContent({ user }: AccountContentProps) {
             </div>
 
             <div>
-              <h2 className="text-lg font-semibold text-gray-900 mb-4">Subscription</h2>
+              <h2 className="text-lg font-semibold text-gray-900 mb-4">{t("account.subscription")}</h2>
               <div className="space-y-4">
                 <div>
-                  <label className="block text-sm font-medium text-gray-700">Current Plan</label>
+                  <label className="block text-sm font-medium text-gray-700">{t("account.current_plan")}</label>
                   <p className="mt-1 text-sm text-gray-900 capitalize">{profile?.plan || "Free"}</p>
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700">Credits Remaining</label>
+                  <label className="block text-sm font-medium text-gray-700">{t("account.credits_remaining")}</label>
                   <p className="mt-1 text-sm text-gray-900">{profile?.credits || 0}</p>
                 </div>
                 {profile?.plan === "free" && (
                   <button
-                    onClick={() => setShowStripeModal(true)}
+                    onClick={() => (window.location.href = "/pricing")}
                     className="px-4 py-2 bg-purple-600 text-white rounded-md hover:bg-purple-700 transition-colors"
                   >
-                    Upgrade to Plus
+                    {t("account.upgrade_button")}
                   </button>
                 )}
               </div>
@@ -362,12 +364,12 @@ export default function AccountContent({ user }: AccountContentProps) {
         {/* Stories Section */}
         <div className="bg-white rounded-lg shadow-sm p-6">
           <div className="flex flex-col sm:flex-row items-center justify-between mb-6 gap-4">
-            <h2 className="text-xl font-bold text-gray-900">My Stories</h2>
+            <h2 className="text-xl font-bold text-gray-900">{t("account.my_stories")}</h2>
 
             {/* Items Per Page Control */}
             {storiesData && storiesData.stories.length > 0 && (
               <div className="flex items-center gap-2">
-                <span className="text-sm font-medium text-gray-700">Per page:</span>
+                <span className="text-sm font-medium text-gray-700">{t("account.per_page")}:</span>
                 <select
                   value={itemsPerPage}
                   onChange={(e) => handleItemsPerPageChange(Number(e.target.value))}
@@ -384,17 +386,18 @@ export default function AccountContent({ user }: AccountContentProps) {
           </div>
 
           {storiesLoading ? (
-            <div className="flex items-center justify-center py-8">
-              <Loader2 className="h-6 w-6 animate-spin text-purple-600" />
+            <div className="text-center py-8">
+              <Loader2 className="h-6 w-6 animate-spin text-purple-600 mx-auto mb-2" />
+              <p className="text-gray-500">{t("account.loading")}</p>
             </div>
           ) : !storiesData || storiesData.stories.length === 0 ? (
             <div className="text-center py-8">
-              <p className="text-gray-500">No stories yet. Create your first story!</p>
+              <p className="text-gray-500">{t("account.no_stories")}</p>
               <button
                 onClick={() => (window.location.href = "/make-tale")}
                 className="mt-4 px-4 py-2 bg-purple-600 text-white rounded-md hover:bg-purple-700 transition-colors"
               >
-                Create Your First Story
+                {t("account.create_first")}
               </button>
             </div>
           ) : (
@@ -404,11 +407,11 @@ export default function AccountContent({ user }: AccountContentProps) {
                   <div key={story.id} className="border border-gray-200 rounded-lg p-4 hover:shadow-md transition-shadow">
                     <div className="flex items-start justify-between mb-2">
                       <h3 className="font-medium text-gray-900 truncate flex-1">
-                        {story.title || story.prompt || "Untitled Story"}
+                        {story.title || story.prompt || t("common.untitled")}
                       </h3>
                       <div className="flex items-center space-x-2 ml-2">
                         {/* Visibility indicator */}
-                        <div className="flex items-center" title={story.visibility === "public" ? "Public" : "Private"}>
+                        <div className="flex items-center" title={story.visibility === "public" ? t("account.public") : t("account.private")}>
                           {story.visibility === "public" ? (
                             <Globe className="h-4 w-4 text-green-600" />
                           ) : (
@@ -422,9 +425,9 @@ export default function AccountContent({ user }: AccountContentProps) {
                             ? "bg-green-100 text-green-800 hover:bg-green-200"
                             : "bg-gray-100 text-gray-800 hover:bg-gray-200"
                             }`}
-                          title={story.visibility === "public" ? "Make Private" : "Make Public"}
+                          title={story.visibility === "public" ? t("account.make_private") : t("account.make_public")}
                         >
-                          {story.visibility === "public" ? "Public" : "Private"}
+                          {story.visibility === "public" ? t("account.public") : t("account.private")}
                         </button>
                       </div>
                     </div>
@@ -456,7 +459,7 @@ export default function AccountContent({ user }: AccountContentProps) {
                         onClick={() => setSelectedStory(story)}
                         className="text-purple-600 hover:text-purple-700 text-sm font-medium"
                       >
-                        Read Story
+                        {t("account.read_story")}
                       </button>
                     </div>
                   </div>
@@ -467,7 +470,9 @@ export default function AccountContent({ user }: AccountContentProps) {
               {storiesData.totalPages > 1 && (
                 <div className="flex flex-col sm:flex-row items-center justify-between gap-4 mt-8 pt-4 border-t">
                   <div className="text-sm text-gray-600">
-                    Page {storiesData.currentPage} of {storiesData.totalPages} ({storiesData.totalCount} stories)
+                    {t("account.page")
+                      .replace("%{current}", storiesData.currentPage.toString())
+                      .replace("%{total}", storiesData.totalPages.toString())}
                   </div>
 
                   <div className="flex items-center gap-2">
@@ -480,7 +485,7 @@ export default function AccountContent({ user }: AccountContentProps) {
                         }`}
                     >
                       <ChevronLeft className="h-4 w-4" />
-                      Previous
+                      {t("gallery.previous")}
                     </button>
 
                     <div className="hidden sm:flex items-center gap-1">
@@ -503,14 +508,14 @@ export default function AccountContent({ user }: AccountContentProps) {
                         );
                       })().map((pageNum) => (
                         <button
-                          key={pageNum}
+                          key={pageNum as number}
                           onClick={() => handlePageChange(pageNum as number)}
                           className={`px-3 py-2 rounded-md text-sm transition-colors ${pageNum === storiesData.currentPage
                             ? "bg-purple-600 text-white"
                             : "bg-white border border-gray-300 text-gray-700 hover:bg-gray-50"
                             }`}
                         >
-                          {pageNum}
+                          {pageNum as number}
                         </button>
                       ))}
                     </div>
@@ -523,7 +528,7 @@ export default function AccountContent({ user }: AccountContentProps) {
                         : "bg-gray-100 text-gray-400 cursor-not-allowed"
                         }`}
                     >
-                      Next
+                      {t("gallery.next")}
                       <ChevronRight className="h-4 w-4" />
                     </button>
                   </div>

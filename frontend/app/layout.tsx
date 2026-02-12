@@ -4,6 +4,7 @@ import { Geist } from "next/font/google"
 import "./globals.css"
 import { AuthProvider } from "@/components/auth-provider"
 import { Footer } from "@/components/footer"
+import { LanguageProvider } from "@/components/language-context"
 
 const geist = Geist({
   subsets: ["latin"],
@@ -29,15 +30,17 @@ export default async function RootLayout({
   const initialSession = null
 
   return (
-    <html lang="en">
-      <body className={geist.className}>
-        <AuthProvider initialSession={initialSession}>
-          <div className="flex flex-col min-h-screen">
-            <main className="flex-grow">{children}</main>
-            <Footer />
-          </div>
-        </AuthProvider>
-      </body>
-    </html>
+    <LanguageProvider>
+      <html lang="en">
+        <body className={geist.className}>
+          <AuthProvider initialSession={initialSession}>
+            <div className="flex flex-col min-h-screen">
+              <main className="flex-grow">{children}</main>
+              <Footer />
+            </div>
+          </AuthProvider>
+        </body>
+      </html>
+    </LanguageProvider>
   )
 }

@@ -6,6 +6,7 @@ import { Card, CardContent } from "@/components/ui/card"
 
 import Link from "next/link"
 import React from "react"
+import { useLanguage } from "./language-context"
 
 interface FAQItem {
   question: string
@@ -108,7 +109,91 @@ const faqData: FAQItem[] = [
 ]
 
 export default function FAQSection() {
+  const { t, language } = useLanguage()
   const [openItems, setOpenItems] = useState<number[]>([])
+
+  const faqItems = [
+    {
+      question: t("faq.q1"),
+      answer: t("faq.a1"),
+    },
+    {
+      question: t("faq.q2"),
+      answer: t("faq.a2"),
+    },
+    {
+      question: t("faq.q3"),
+      answer: t("faq.a3"),
+    },
+    {
+      question: t("faq.q4"),
+      answer: t("faq.a4"),
+    },
+    {
+      question: t("faq.q5"),
+      answer: t("faq.a5"),
+    },
+    {
+      question: t("faq.q6"),
+      answer: t("faq.a6"),
+    },
+    {
+      question: t("faq.q7"),
+      answer: t("faq.a7"),
+    },
+    {
+      question: t("faq.q8"),
+      answer: t("faq.a8"),
+    },
+    {
+      question: t("faq.q9"),
+      answer: t("faq.a9"),
+    },
+    {
+      question: t("faq.q10"),
+      answer: t("faq.a10"),
+    },
+    {
+      question: t("faq.q11"),
+      answer: t("faq.a11"),
+    },
+    {
+      question: t("faq.q12"),
+      answer: (
+        <>
+          {language === "es" ? "Sí, utilizamos cookies para garantizar que obtengas la mejor experiencia en nuestro sitio web. Para obtener información detallada sobre cómo utilizamos las cookies, consulta nuestra " : "Yes, we use cookies to ensure you get the best experience on our website. For detailed information about how we use cookies, please view our "}
+          <Link href="/cookie-policy" className="text-purple-600 hover:text-purple-700 underline">
+            {language === "es" ? "Política de Cookies" : "Cookie Policy"}
+          </Link>
+          .
+        </>
+      ),
+    },
+    {
+      question: t("faq.q13"),
+      answer: (
+        <>
+          {language === "es" ? "Tu privacidad es nuestra prioridad. Puedes leer nuestra " : "Your privacy is our priority. You can read our full "}
+          <Link href="/privacy-policy" className="text-purple-600 hover:text-purple-700 underline">
+            {language === "es" ? "Política de Privacidad" : "Privacy Policy"}
+          </Link>{" "}
+          {language === "es" ? "para entender cómo recopilamos, usamos y protegemos tus datos." : "to understand how we collect, use, and protect your data."}
+        </>
+      ),
+    },
+    {
+      question: t("faq.q14"),
+      answer: (
+        <>
+          {language === "es" ? "Al usar Cuentee, aceptas nuestros " : "By using Cuentee, you agree to our "}
+          <Link href="/terms-of-service" className="text-purple-600 hover:text-purple-700 underline">
+            {language === "es" ? "Términos de Servicio" : "Terms of Service"}
+          </Link>
+          . {language === "es" ? "Por favor, léelos detenidamente para entender tus derechos y responsabilidades." : "Please read them carefully to understand your rights and responsibilities."}
+        </>
+      ),
+    },
+  ]
 
   const toggleItem = (index: number) => {
     setOpenItems((prev) => (prev.includes(index) ? prev.filter((i) => i !== index) : [...prev, index]))
@@ -116,7 +201,7 @@ export default function FAQSection() {
 
   return (
     <div className="space-y-4">
-      {faqData.map((item, index) => (
+      {faqItems.map((item, index) => (
         <Card key={index} className="overflow-hidden">
           <button
             onClick={() => toggleItem(index)}

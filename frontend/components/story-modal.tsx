@@ -8,6 +8,7 @@ import type { Story } from "@/lib/supabase/stories"
 import MarkdownRenderer from "./markdown-renderer"
 import { getPdfUrl } from "./story-preview"
 import StoryMetadata from "./story-metadata"
+import { useLanguage } from "./language-context"
 
 interface StoryModalProps {
   story: Story
@@ -16,6 +17,7 @@ interface StoryModalProps {
 }
 
 export default function StoryModal({ story, onClose, onDelete }: StoryModalProps) {
+  const { t } = useLanguage()
   const [isPromptExpanded, setIsPromptExpanded] = useState(false)
 
   const formatDate = (dateString: string) => {
@@ -46,7 +48,7 @@ export default function StoryModal({ story, onClose, onDelete }: StoryModalProps
           <div className="flex-1 mr-4">
             <h2 className="text-2xl font-bold text-gray-900">{story.title}</h2>
             <p className="text-gray-600 text-sm mt-1">
-              Created by <span className="font-medium text-purple-700">{story.profiles?.username || "Anonymous"}</span> on {formatDate(story.created_at)}
+              {t("account.created_by")} <span className="font-medium text-purple-700">{story.profiles?.username || t("account.anonymous")}</span> {t("account.on")} {formatDate(story.created_at)}
             </p>
             <StoryMetadata
               storyType={story.story_type}
@@ -72,14 +74,14 @@ export default function StoryModal({ story, onClose, onDelete }: StoryModalProps
           {onDelete && (
             <button
               onClick={() => {
-                if (window.confirm("Are you sure you want to delete this story? This action cannot be undone.")) {
+                if (window.confirm(t("account.delete_confirm"))) {
                   onDelete(story.id)
                 }
               }}
               className="px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700 transition-colors flex items-center gap-2"
             >
               <Trash2 className="h-4 w-4" />
-              Delete Story
+              {t("account.delete_story")}
             </button>
           )}
           {getPdfUrl(story.content) ? (
@@ -90,17 +92,17 @@ export default function StoryModal({ story, onClose, onDelete }: StoryModalProps
               className="px-4 py-2 bg-purple-600 text-white rounded-md hover:bg-purple-700 transition-colors flex items-center gap-2"
             >
               <Download className="h-4 w-4" />
-              Download PDF
+              {t("account.download_pdf")}
             </a>
           ) : (
             <button
               onClick={() => {
                 navigator.clipboard.writeText(typeof story.content === 'string' ? story.content : JSON.stringify(story.content))
-                alert("Story copied to clipboard! (PDF not available for this story)")
+                alert(t("account.copy_success"))
               }}
               className="px-4 py-2 bg-gray-200 text-gray-700 rounded-md hover:bg-gray-300 transition-colors"
             >
-              Copy Story
+              {t("account.copy_story")}
             </button>
           )}
         </div>

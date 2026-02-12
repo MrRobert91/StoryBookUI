@@ -1,34 +1,19 @@
 import os
+from api.prompts.utils import get_localized_prompts
 
 DEFAULT_NUM_CHAPTERS = int(os.getenv("NUM_CHAPTERS", "10"))
 WORDS_PER_CHAPTER = 350
 
-def get_story_system_prompt(num_chapters: int = DEFAULT_NUM_CHAPTERS) -> str:
-    return f"""Generate creative fantasy stories for children with exactly {num_chapters} chapters.
+def get_story_system_prompt(lang: str = "en", num_chapters: int = DEFAULT_NUM_CHAPTERS) -> str:
+    prompts = get_localized_prompts(lang)
+    sys_prompts = prompts["STORY_SYSTEM_PROMPTS"]
+    
+    system = sys_prompts["system"].format(num_chapters=num_chapters)
+    guidelines = sys_prompts["guidelines"].format(words_per_chapter=WORDS_PER_CHAPTER)
+    
+    return f"{system}\n\n{guidelines}"
 
-IMPORTANT GUIDELINES:
-- Each chapter must have approximately {WORDS_PER_CHAPTER} words
-- Content must be family-friendly and appropriate for children
-- Use colorful, imaginative descriptions
-- Include positive messages and friendly characters
-- Return structured JSON with 'title' and 'chapters' array
-- Each chapter must have 'title' and 'content' fields
+def get_image_prompt_system(lang: str = "en") -> str:
+    prompts = get_localized_prompts(lang)
+    return prompts["STORY_SYSTEM_PROMPTS"]["image_system"]
 
-Example structure:
-{{
-  "title": "The Dragon's Adventure",
-  "chapters": [
-    {{"title": "Chapter 1: The Discovery", "content": "Once upon a time..."}},
-    {{"title": "Chapter 2: The Journey", "content": "The young dragon..."}},
-    ...
-  ]
-}}"""
-
-IMAGE_PROMPT_SYSTEM = (
-    "Create a concise image prompt suitable for children's books. "
-    "The result MUST describe an illustration consistent with the requested visual style. "
-    "Focus on describing the scene, characters, and emotions clearly for a young audience. "
-    "AVOID any scary, violent, dark, or realistic/photorealistic imagery. "
-    "Do not mention cameras, lenses, or photographic terms. "
-    "Return ONLY the prompt text."
-)

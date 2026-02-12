@@ -1,6 +1,7 @@
 "use client"
 
 import { useAuth } from "@/components/auth-provider"
+import { useLanguage } from "@/components/language-context"
 import { useRouter } from "next/navigation"
 import { useEffect } from "react"
 import Navbar from "@/components/navbar"
@@ -9,6 +10,7 @@ import { Loader2 } from "lucide-react"
 
 export default function AccountPage() {
   const { user, loading } = useAuth()
+  const { t } = useLanguage()
   const router = useRouter()
 
   useEffect(() => {
@@ -26,7 +28,7 @@ export default function AccountPage() {
         <div className="flex items-center justify-center py-24">
           <div className="text-center">
             <Loader2 className="h-8 w-8 animate-spin text-purple-600 mx-auto mb-4" />
-            <p className="text-gray-600">Loading your account...</p>
+            <p className="text-gray-600">{t("account.loading")}</p>
           </div>
         </div>
       </div>
@@ -40,13 +42,13 @@ export default function AccountPage() {
         <Navbar />
         <div className="flex items-center justify-center py-24">
           <div className="text-center">
-            <h2 className="text-2xl font-bold text-gray-900 mb-4">Please Sign In</h2>
-            <p className="text-gray-600 mb-6">You need to be logged in to access your account.</p>
+            <h2 className="text-2xl font-bold text-gray-900 mb-4">{t("account.sign_in_title")}</h2>
+            <p className="text-gray-600 mb-6">{t("account.sign_in_desc")}</p>
             <button
               onClick={() => router.push("/auth/login")}
               className="px-6 py-3 bg-purple-600 text-white rounded-md hover:bg-purple-700 transition-colors"
             >
-              Go to Login
+              {t("account.go_to_login")}
             </button>
           </div>
         </div>

@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react"
 import Navbar from "@/components/navbar"
+import { useLanguage } from "@/components/language-context"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { storyOperations, type Story, type PaginatedStoriesResult } from "@/lib/supabase/stories"
 import { BookOpen, Calendar, User, Loader2, AlertCircle, ChevronLeft, ChevronRight, Eye } from "lucide-react"
@@ -12,6 +13,7 @@ import StoryMetadata from "@/components/story-metadata"
 const ITEMS_PER_PAGE_OPTIONS = [12, 24, 48, 96]
 
 export default function GalleryPage() {
+  const { t } = useLanguage()
   const [storiesData, setStoriesData] = useState<PaginatedStoriesResult | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
@@ -95,18 +97,17 @@ export default function GalleryPage() {
         {/* Header */}
         <div className="text-center mb-12">
           <h1 className="text-4xl md:text-5xl font-bold text-gray-900 mb-6">
-            Story <span className="text-purple-600">Gallery</span>
+            {t("gallery.title_1")} <span className="text-purple-600">{t("gallery.title_2")}</span>
           </h1>
           <p className="text-xl text-gray-600 max-w-3xl mx-auto">
-            Discover magical tales created by our community. Explore stories from around the world and get inspired for
-            your own creations.
+            {t("gallery.subtitle")}
           </p>
         </div>
 
         {/* Controls */}
         <div className="flex flex-col sm:flex-row justify-between items-center mb-8 gap-4">
           <div className="flex items-center gap-2">
-            <span className="text-sm font-medium text-gray-700">Stories per page:</span>
+            <span className="text-sm font-medium text-gray-700">{t("gallery.stories_per_page")}:</span>
             <select
               value={itemsPerPage}
               onChange={(e) => handleItemsPerPageChange(Number(e.target.value))}
@@ -122,7 +123,9 @@ export default function GalleryPage() {
 
           {storiesData && (
             <div className="text-sm text-gray-600">
-              Showing {storiesData.stories.length} of {storiesData.totalCount} stories
+              {t("gallery.showing")
+                .replace("%{count}", storiesData.stories.length.toString())
+                .replace("%{total}", storiesData.totalCount.toString())}
             </div>
           )}
         </div>
@@ -132,37 +135,36 @@ export default function GalleryPage() {
           <div className="flex items-center justify-center py-24">
             <div className="text-center">
               <Loader2 className="h-12 w-12 animate-spin text-purple-600 mx-auto mb-4" />
-              <p className="text-gray-600 text-lg">Loading magical stories...</p>
+              <p className="text-gray-600 text-lg">{t("gallery.loading")}</p>
             </div>
           </div>
         ) : error ? (
           <div className="flex items-center justify-center py-24">
             <div className="text-center">
               <AlertCircle className="h-16 w-16 text-red-500 mx-auto mb-4" />
-              <h3 className="text-xl font-semibold text-gray-900 mb-2">Error Loading Stories</h3>
+              <h3 className="text-xl font-semibold text-gray-900 mb-2">{t("gallery.error_title")}</h3>
               <p className="text-gray-600 mb-6">{error}</p>
               <button
                 onClick={() => loadPublicStories(currentPage, itemsPerPage)}
                 className="px-6 py-3 bg-purple-600 text-white rounded-md hover:bg-purple-700 transition-colors"
               >
-                Try Again
+                {t("gallery.try_again")}
               </button>
             </div>
           </div>
         ) : !storiesData || storiesData.stories.length === 0 ? (
           <div className="text-center py-24">
             <BookOpen className="h-20 w-20 text-gray-300 mx-auto mb-6" />
-            <h3 className="text-2xl font-semibold text-gray-900 mb-4">No Public Stories Yet</h3>
+            <h3 className="text-2xl font-semibold text-gray-900 mb-4">{t("gallery.no_stories_title")}</h3>
             <p className="text-gray-600 mb-8 max-w-md mx-auto">
-              Be the first to share your magical tale with the community! Create a story and make it public to appear in
-              the gallery.
+              {t("gallery.no_stories_desc")}
             </p>
             <a
               href="/make-tale"
               className="inline-flex items-center px-6 py-3 bg-purple-600 text-white rounded-md hover:bg-purple-700 transition-colors"
             >
               <BookOpen className="h-4 w-4 mr-2" />
-              Create Your First Story
+              {t("gallery.create_first")}
             </a>
           </div>
         ) : (
@@ -182,7 +184,7 @@ export default function GalleryPage() {
                       </div>
                       <div className="flex items-center gap-1">
                         <User className="h-3 w-3" />
-                        {story.profiles?.username || "Anonymous"}
+                        {story.profiles?.username || t("gallery.anonymous")}
                       </div>
                     </div>
                   </CardHeader>
@@ -212,7 +214,7 @@ export default function GalleryPage() {
                       className="w-full flex items-center justify-center gap-2 px-4 py-2 bg-purple-600 text-white rounded-md hover:bg-purple-700 transition-colors text-sm"
                     >
                       <Eye className="h-4 w-4" />
-                      Read Full Story
+                      {t("gallery.read_full")}
                     </button>
                   </CardContent>
                 </Card>
@@ -223,7 +225,9 @@ export default function GalleryPage() {
             {storiesData.totalPages > 1 && (
               <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
                 <div className="text-sm text-gray-600">
-                  Page {storiesData.currentPage} of {storiesData.totalPages}
+                  {t("gallery.page")
+                    .replace("%{current}", storiesData.currentPage.toString())
+                    .replace("%{total}", storiesData.totalPages.toString())}
                 </div>
 
                 <div className="flex items-center gap-2">
@@ -237,7 +241,7 @@ export default function GalleryPage() {
                       }`}
                   >
                     <ChevronLeft className="h-4 w-4" />
-                    Previous
+                    {t("gallery.previous")}
                   </button>
 
                   {/* Page Numbers */}
@@ -265,12 +269,12 @@ export default function GalleryPage() {
                       : "bg-gray-100 text-gray-400 cursor-not-allowed"
                       }`}
                   >
-                    Next
+                    {t("gallery.next")}
                     <ChevronRight className="h-4 w-4" />
                   </button>
                 </div>
 
-                <div className="text-sm text-gray-600">{storiesData.totalCount} total stories</div>
+                <div className="text-sm text-gray-600">{t("gallery.total_stories").replace("%{count}", storiesData.totalCount.toString())}</div>
               </div>
             )}
           </>

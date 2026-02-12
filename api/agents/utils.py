@@ -162,6 +162,7 @@ class StoryState(TypedDict):
     num_chapters: int | None
     story_type: str | None
     metadata: dict | None
+    language: str | None
 
 # ============================================================================
 # IMAGE GENERATION LOGIC

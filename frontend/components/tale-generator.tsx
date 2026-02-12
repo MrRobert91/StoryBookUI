@@ -9,6 +9,7 @@ import { supabase, isSupabaseConfigured } from "@/lib/supabase/client"
 import { useAuth } from "@/components/auth-provider"
 import StripeModal from "./stripe-modal"
 import { useStoryGeneration } from "@/hooks/use-story-generation"
+import { useLanguage } from "./language-context"
 
 interface Chapter {
   title: string
@@ -18,6 +19,7 @@ interface Chapter {
 
 export default function TaleGenerator() {
   const { user, loading: authLoading } = useAuth()
+  const { language, t } = useLanguage()
   const {
     isGenerating: isGeneratingAsync,
     status: asyncStatus,
@@ -31,7 +33,6 @@ export default function TaleGenerator() {
   const [storyTitle, setStoryTitle] = useState<string | null>(null)
   const [numChapters, setNumChapters] = useState("3")
   const [visualStyle, setVisualStyle] = useState("cartoons")
-  const [dictationLanguage, setDictationLanguage] = useState("en")
 
   const [apiError, setApiError] = useState<string | null>(null)
   const [isSaving, setIsSaving] = useState(false)
@@ -87,19 +88,19 @@ export default function TaleGenerator() {
       }
 
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true })
-      
+
       // Determine WebSocket URL (handling http/https vs ws/wss)
       const wsProtocol = fastApiUrl.startsWith("https") ? "wss" : "ws"
       const wsHost = fastApiUrl.replace(/^https?:\/\//, "")
-      const wsUrl = `${wsProtocol}://${wsHost}/transcription/transcribe?token=${session.access_token}&lang=${encodeURIComponent(dictationLanguage)}`
-      
+      const wsUrl = `${wsProtocol}://${wsHost}/transcription/transcribe?token=${session.access_token}&lang=${encodeURIComponent(language)}`
+
       console.log("Connecting to WS:", wsUrl) // Debug log
       const ws = new WebSocket(wsUrl)
-      
+
       ws.onopen = () => {
         console.log("WebSocket Connected")
         const recorder = new MediaRecorder(stream, { mimeType: 'audio/webm' })
-        
+
         recorder.ondataavailable = (event) => {
           if (event.data.size > 0 && ws.readyState === WebSocket.OPEN) {
             ws.send(event.data)
@@ -116,7 +117,7 @@ export default function TaleGenerator() {
         try {
           const response = JSON.parse(event.data)
           if (response.type === 'final') {
-             appendText(response.text)
+            appendText(response.text)
           }
           // Currently ignoring partials to avoid janky text updates, 
           // can enable later if we add a 'preview' text area.
@@ -134,7 +135,7 @@ export default function TaleGenerator() {
       ws.onclose = () => {
         console.log("WebSocket Disconnected")
         if (isRecording) {
-            stopRecording() // Ensure UI updates if server closes connection
+          stopRecording() // Ensure UI updates if server closes connection
         }
       }
 
@@ -165,7 +166,7 @@ export default function TaleGenerator() {
   // Cleanup on unmount
   useEffect(() => {
     return () => {
-        stopRecording()
+      stopRecording()
     }
   }, [])
 
@@ -217,7 +218,8 @@ export default function TaleGenerator() {
       await generateStory({
         topic: prompt.trim(),
         num_chapters: parseInt(numChapters),
-        visual_style: visualStyle
+        visual_style: visualStyle,
+        lang: language
       }, session.access_token)
     } catch (error) {
       console.error("[v0] Error initiating async story generation:", error)
@@ -236,30 +238,15 @@ export default function TaleGenerator() {
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <Sparkles className="h-5 w-5 text-purple-600" />
-              Story Prompt
+              {t("tale_generator.story_prompt")}
             </CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
-            <div className="space-y-2">
-              <span className="text-sm font-medium text-gray-700">Dictation Language</span>
-              <select
-                className="flex h-10 w-full items-center justify-between rounded-md border border-input bg-background px-3 py-2 text-sm text-gray-900 ring-offset-background placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
-                value={dictationLanguage}
-                onChange={(e) => setDictationLanguage(e.target.value)}
-                disabled={isGeneratingAsync || authLoading || isRecording}
-              >
-                <option value="en">English</option>
-                <option value="es">Español</option>
-                <option value="fr">Français</option>
-                <option value="pt">Português</option>
-                <option value="it">Italiano</option>
-                <option value="de">Deutsch</option>
-              </select>
-            </div>
+
 
             <div className="relative">
               <Textarea
-                placeholder="Describe your story idea... For example: 'A brave princess who befriends a friendly dragon and goes on an adventure to save her village from a magical storm'"
+                placeholder={t("tale_generator.prompt_placeholder")}
                 value={prompt}
                 onChange={(e) => setPrompt(e.target.value)}
                 rows={4}
@@ -268,12 +255,11 @@ export default function TaleGenerator() {
               />
               <button
                 onClick={toggleRecording}
-                className={`absolute bottom-3 right-3 p-2 rounded-full transition-all duration-200 shadow-sm ${
-                  isRecording 
-                    ? "bg-red-100 text-red-600 hover:bg-red-200 animate-pulse ring-2 ring-red-400" 
+                className={`absolute bottom-3 right-3 p-2 rounded-full transition-all duration-200 shadow-sm ${isRecording
+                    ? "bg-red-100 text-red-600 hover:bg-red-200 animate-pulse ring-2 ring-red-400"
                     : "bg-gray-100 text-gray-500 hover:bg-gray-200 hover:text-purple-600"
-                }`}
-                title={isRecording ? "Stop Recording" : "Start Voice Input"}
+                  }`}
+                title={isRecording ? t("tale_generator.stop_voice") : t("tale_generator.start_voice")}
                 type="button"
                 disabled={isGeneratingAsync || authLoading}
               >
@@ -283,7 +269,7 @@ export default function TaleGenerator() {
 
             {/* Chapter Length Selector */}
             <div className="space-y-2">
-              <span className="text-sm font-medium text-gray-700">Story Length (Chapters)</span>
+              <span className="text-sm font-medium text-gray-700">{t("tale_generator.story_length")}</span>
               <div className="flex gap-4">
                 {["3", "6", "9"].map((num) => (
                   <label key={num} className="flex items-center gap-2 cursor-pointer bg-white px-3 py-2 rounded-md border hover:bg-gray-50 transition-colors">
@@ -297,7 +283,7 @@ export default function TaleGenerator() {
                       disabled={isGeneratingAsync}
                     />
                     <span className="text-sm text-gray-700">
-                      {num === "3" ? "Short (3)" : num === "6" ? "Medium (6)" : "Long (9)"}
+                      {num === "3" ? t("tale_generator.short") : num === "6" ? t("tale_generator.medium") : t("tale_generator.long")}
                     </span>
                   </label>
                 ))}
@@ -306,7 +292,7 @@ export default function TaleGenerator() {
 
             {/* Visual Style Selector */}
             <div className="space-y-3">
-              <span className="text-sm font-medium text-gray-700">Artistic Style</span>
+              <span className="text-sm font-medium text-gray-700">{t("tale_generator.art_style")}</span>
               <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-3">
                 {[
                   { id: "cartoons", label: "Cartoons", icon: "🎨" },
@@ -327,7 +313,7 @@ export default function TaleGenerator() {
                     `}
                   >
                     <span className="text-2xl">{style.icon}</span>
-                    <span className="text-xs font-medium text-center">{style.label}</span>
+                    <span className="text-xs font-medium text-center">{t(`styles.${style.id}`)}</span>
                   </div>
                 ))}
               </div>
@@ -346,9 +332,9 @@ export default function TaleGenerator() {
                 {saveSuccess && <Check className="h-4 w-4" />}
                 {saveError && <AlertCircle className="h-4 w-4" />}
                 <span>
-                  {isSaving && "Saving story..."}
-                  {saveSuccess && "Story saved successfully!"}
-                  {saveError && `Save error: ${saveError}`}
+                  {isSaving && t("tale_generator.saving")}
+                  {saveSuccess && t("tale_generator.save_success")}
+                  {saveError && `${t("tale_generator.save_error")}: ${saveError}`}
                 </span>
               </div>
             )}
@@ -371,26 +357,26 @@ export default function TaleGenerator() {
               {isGeneratingAsync ? (
                 <>
                   <Loader2 className="h-5 w-5 animate-spin" />
-                  Generating... ({asyncStatus})
+                  {t("tale_generator.generating")} ({asyncStatus})
                 </>
               ) : (
                 <>
                   <Sparkles className="h-5 w-5" />
-                  Generate Story with Images
+                  {t("tale_generator.generate_button")}
                 </>
               )}
             </button>
 
             {isGeneratingAsync && (
               <div className="mt-4 p-4 bg-blue-50 border border-blue-200 rounded-lg">
-                <p className="text-blue-800 text-sm">Status: {asyncStatus}</p>
+                <p className="text-blue-800 text-sm">{t("tale_generator.status")}: {asyncStatus}</p>
               </div>
             )}
 
             {!user && (
               <div className="text-center text-sm text-gray-600 mt-4 flex items-center justify-center gap-2">
                 <Lock className="h-4 w-4 text-gray-500" />
-                Sign in to generate and save your stories.
+                {t("tale_generator.sign_in_to_generate")}
               </div>
             )}
           </CardContent>

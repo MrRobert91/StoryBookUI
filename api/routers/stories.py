@@ -14,7 +14,7 @@ class StoryRequest(BaseModel):
     topic: str
     num_chapters: int = 3
     visual_style: str | None = None
-    language: str | None = "Spanish"
+    lang: str | None = "en"
 
 # --- Endpoints ---
 
@@ -26,10 +26,9 @@ async def generate_story_async(request: StoryRequest, user: UserProfile = Depend
     # Determine Image Style Context
     image_style_context = None
     if request.visual_style:
-         # Import here to avoid circulars if any, though top level is better if possible. 
-         # Assuming clean imports.
-         from api.prompts.guided_story_prompts import VISUAL_STYLE_PROMPTS
-         style_desc = VISUAL_STYLE_PROMPTS.get(request.visual_style, request.visual_style)
+         from api.prompts.utils import get_localized_prompts
+         prompts = get_localized_prompts(request.lang or "en")
+         style_desc = prompts["VISUAL_STYLE_PROMPTS"].get(request.visual_style, request.visual_style)
          image_style_context = f"ARTISTIC DIRECTION (Must follow strictly):\n{style_desc}"
 
     try:
@@ -42,7 +41,7 @@ async def generate_story_async(request: StoryRequest, user: UserProfile = Depend
             image_style_context=image_style_context,
             story_type="open",
             metadata={
-                "language": request.language,
+                "language": request.lang,
                 "story_length": request.num_chapters,
                 "artistic_style": request.visual_style
             }
@@ -61,8 +60,9 @@ class GuidedStoryRequest(BaseModel):
     mission: str
     visual_style: str
     num_chapters: int
+    lang: str = "en"
 
-from api.prompts.guided_story_prompts import VISUAL_STYLE_PROMPTS, TOPIC_PROMPTS, MISSION_PROMPTS
+from api.prompts.utils import get_localized_prompts
 
 @router.post("/generate_guided_story_async")
 async def generate_guided_story_async(req: GuidedStoryRequest, user: UserProfile = Depends(get_user_with_credits)):
@@ -82,36 +82,22 @@ async def generate_guided_story_async(req: GuidedStoryRequest, user: UserProfile
         protag_name = req.protagonist
         protag_desc = "un personaje amable y curioso"
 
-    # 2. Obtener descripciones detalladas de los mappings
-    # Si no existe la key, usamos el valor raw como fallback (aunque no debería pasar)
-    topic_description = TOPIC_PROMPTS.get(req.scientific_topic, req.scientific_topic)
-    mission_description = MISSION_PROMPTS.get(req.mission, req.mission)
-    visual_style_description = VISUAL_STYLE_PROMPTS.get(req.visual_style, req.visual_style)
-
-    # 3. Construir el prompt de la historia (SOLO TEXTO)
-    story_prompt = (
-        f"Eres un experto escritor de cuentos infantiles. Escribe un cuento educativo para niños de {req.age_group} años.\n\n"
-        f"DATOS PRINCIPALES:\n"
-        f"- Protagonista: {protag_name}.\n"
-        f"- Tema Científico: {topic_description}\n"
-        f"- Trama/Misión: {mission_description}\n\n"
-        f"ESTRUCTURA OBLIGATORIA:\n"
-        f"1. Título: Creativo y relacionado con la misión.\n"
-        f"2. Capítulos: Divide la historia en {req.num_chapters} capítulos cortos.\n"
-        f"3. Contenido: El tono debe ser divertido, seguro y fácil de leer. "
-        f"Asegúrate de explicar el concepto científico de forma natural dentro de la narrativa.\n"
-        f"Devuelve SOLO el JSON con el formato establecido."
+    # 2. Obtener prompts localizados usando la lógica centralizada
+    from api.prompts.guided_story_prompts import get_guided_story_prompts
+    
+    guided_prompts = get_guided_story_prompts(
+        lang=req.lang,
+        age_group=req.age_group,
+        protagonist_name=protag_name,
+        protagonist_desc=protag_desc,
+        scientific_topic=req.scientific_topic,
+        mission=req.mission,
+        visual_style=req.visual_style,
+        num_chapters=req.num_chapters
     )
-
-    # 4. Construir el contexto visual (SOLO IMAGENES)
-    image_style_context = (
-        f"CHARACTER DESIGN:\n"
-        f"- Name: {protag_name}\n"
-        f"- Description: {protag_desc}\n\n"
-        f"ARTISTIC DIRECTION (Must follow strictly):\n"
-        f"{visual_style_description}\n\n"
-        f"TARGET AUDIENCE: Children {req.age_group} years old (keep it age-appropriate, safe, and engaging)."
-    )
+    
+    story_prompt = guided_prompts["story_prompt"]
+    image_style_context = guided_prompts["image_style_context"]
 
     logger.info(f"Generated Rich Story Prompt: {story_prompt[:100]}...")
 
@@ -133,7 +119,8 @@ async def generate_guided_story_async(req: GuidedStoryRequest, user: UserProfile
                 "scientific": True, # Based on endpoint purpose
                 "topic": req.scientific_topic,
                 "mission": req.mission,
-                "visual_style": req.visual_style
+                "visual_style": req.visual_style,
+                "language": req.lang
             }
         )
         return {"task_id": task.id, "status": "processing"}

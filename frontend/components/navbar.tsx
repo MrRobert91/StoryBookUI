@@ -6,6 +6,8 @@ import { Menu, X, BookOpen, LogOut, User } from "lucide-react"
 import { useAuth } from "@/components/auth-provider"
 import { supabase, isSupabaseConfigured } from "@/lib/supabase/client"
 import { profileOperations, type UserProfile } from "@/lib/supabase/profile-operations"
+import LanguageSelector from "./language-selector"
+import { useLanguage } from "./language-context"
 
 export default function Navbar() {
   const { user, loading } = useAuth()
@@ -13,6 +15,7 @@ export default function Navbar() {
   const [isLoggingOut, setIsLoggingOut] = useState(false)
   const [userProfile, setUserProfile] = useState<UserProfile | null>(null)
   const [profileLoading, setProfileLoading] = useState(false)
+  const { t } = useLanguage()
 
   useEffect(() => {
     if (user && !loading) {
@@ -41,11 +44,11 @@ export default function Navbar() {
   }
 
   const navigation = [
-    { name: "Make a Tale", href: "/make-tale" },
-    { name: "Gallery", href: "/gallery" },
-    { name: "About Us", href: "/about" },
-    { name: "Pricing", href: "/pricing" },
-    { name: "FAQ", href: "/faq" },
+    { name: t("common.nav.make_tale"), href: "/make-tale" },
+    { name: t("common.nav.gallery"), href: "/gallery" },
+    { name: t("common.nav.about_us"), href: "/about" },
+    { name: t("common.nav.pricing"), href: "/pricing" },
+    { name: t("common.nav.faq"), href: "/faq" },
   ]
 
   const handleSignOut = async () => {
@@ -122,38 +125,39 @@ export default function Navbar() {
               </Link>
             ))}
 
+            <LanguageSelector />
+
             {user ? (
               <div className="flex items-center space-x-4">
                 <Link href="/account">
                   <button className="flex items-center gap-2 px-3 py-2 text-sm font-medium text-gray-700 hover:text-purple-600 transition-colors">
                     <User className="h-4 w-4" />
-                    My Account
+                    {t("common.my_account")}
                   </button>
                 </Link>
                 <span className="text-sm text-gray-600">
-                  Hello, {profileLoading ? "Loading..." : userProfile?.username || user.email?.split("@")[0] || "User"}
+                  {t("common.hello")}, {profileLoading ? t("common.loading") : userProfile?.username || user.email?.split("@")[0] || "User"}
                 </span>
                 <button
                   onClick={handleSignOut}
-                  className={`flex items-center gap-2 px-3 py-2 border border-gray-300 rounded-md text-sm font-medium transition-colors ${
-                    isLoggingOut ? "bg-gray-100 text-gray-400 cursor-not-allowed" : "text-gray-700 hover:bg-gray-50"
-                  }`}
+                  className={`flex items-center gap-2 px-3 py-2 border border-gray-300 rounded-md text-sm font-medium transition-colors ${isLoggingOut ? "bg-gray-100 text-gray-400 cursor-not-allowed" : "text-gray-700 hover:bg-gray-50"
+                    }`}
                   disabled={isLoggingOut}
                 >
                   <LogOut className="h-4 w-4" />
-                  {isLoggingOut ? "Signing out..." : "Sign Out"}
+                  {isLoggingOut ? t("common.signing_out") : t("common.sign_out")}
                 </button>
               </div>
             ) : (
               <div className="flex items-center space-x-4">
                 <Link href="/auth/login">
                   <button className="px-4 py-2 border border-gray-300 rounded-md text-gray-700 hover:bg-gray-50 transition-colors">
-                    Sign In
+                    {t("common.sign_in")}
                   </button>
                 </Link>
                 <Link href="/auth/sign-up">
                   <button className="px-4 py-2 bg-purple-600 hover:bg-purple-700 text-white rounded-md transition-colors">
-                    Get Started
+                    {t("common.get_started")}
                   </button>
                 </Link>
               </div>
@@ -186,17 +190,21 @@ export default function Navbar() {
                 </Link>
               ))}
 
+              <div className="px-3 py-2">
+                <LanguageSelector />
+              </div>
+
               {user ? (
                 <div className="pt-4 border-t">
                   <Link href="/account" className="block px-3 py-2" onClick={() => setIsOpen(false)}>
                     <button className="w-full flex items-center gap-2 px-3 py-2 text-sm font-medium text-gray-700 hover:text-purple-600 transition-colors">
                       <User className="h-4 w-4" />
-                      My Account
+                      {t("common.my_account")}
                     </button>
                   </Link>
                   <div className="px-3 py-2 text-sm text-gray-600">
-                    Hello,{" "}
-                    {profileLoading ? "Loading..." : userProfile?.username || user.email?.split("@")[0] || "User"}
+                    {t("common.hello")},{" "}
+                    {profileLoading ? t("common.loading") : userProfile?.username || user.email?.split("@")[0] || "User"}
                   </div>
                   <div className="px-3">
                     <button
@@ -204,13 +212,12 @@ export default function Navbar() {
                         setIsOpen(false)
                         handleSignOut()
                       }}
-                      className={`w-full flex items-center gap-2 px-3 py-2 border border-gray-300 rounded-md text-sm font-medium transition-colors ${
-                        isLoggingOut ? "bg-gray-100 text-gray-400 cursor-not-allowed" : "text-gray-700 hover:bg-gray-50"
-                      }`}
+                      className={`w-full flex items-center gap-2 px-3 py-2 border border-gray-300 rounded-md text-sm font-medium transition-colors ${isLoggingOut ? "bg-gray-100 text-gray-400 cursor-not-allowed" : "text-gray-700 hover:bg-gray-50"
+                        }`}
                       disabled={isLoggingOut}
                     >
                       <LogOut className="h-4 w-4" />
-                      {isLoggingOut ? "Signing out..." : "Sign Out"}
+                      {isLoggingOut ? t("common.signing_out") : t("common.sign_out")}
                     </button>
                   </div>
                 </div>
@@ -218,12 +225,12 @@ export default function Navbar() {
                 <div className="pt-4 border-t space-y-2">
                   <Link href="/auth/login" className="block px-3" onClick={() => setIsOpen(false)}>
                     <button className="w-full px-3 py-2 border border-gray-300 rounded-md text-gray-700 hover:bg-gray-50 transition-colors">
-                      Sign In
+                      {t("common.sign_in")}
                     </button>
                   </Link>
                   <Link href="/auth/sign-up" className="block px-3" onClick={() => setIsOpen(false)}>
                     <button className="w-full px-3 py-2 bg-purple-600 hover:bg-purple-700 text-white rounded-md transition-colors">
-                      Get Started
+                      {t("common.get_started")}
                     </button>
                   </Link>
                 </div>

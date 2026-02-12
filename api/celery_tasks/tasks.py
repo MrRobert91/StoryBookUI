@@ -37,7 +37,8 @@ def generate_story_task(self, topic: str, user_id: str, jwt_token: str, model: s
             "image_style_context": image_style_context,
             "num_chapters": num_chapters,
             "story_type": story_type,
-            "metadata": metadata or {}
+            "metadata": metadata or {},
+            "language": (metadata or {}).get("language", "en")
         })
         
         story_data = result.get("story_data")
@@ -142,3 +143,4 @@ def generate_story_task(self, topic: str, user_id: str, jwt_token: str, model: s
     except Exception as e:
         logger.error(f"🔥 [Task {task_id}] CRITICAL FAILURE: {str(e)}", exc_info=True)
         raise self.retry(exc=e, countdown=60, max_retries=3)
+

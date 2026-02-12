@@ -11,6 +11,7 @@ import { Loader2, Sparkles, AlertCircle, Compass } from "lucide-react"
 import StoryViewer from "./story-viewer"
 import { supabase } from "@/lib/supabase/client"
 import { useStoryGeneration } from "@/hooks/use-story-generation"
+import { useLanguage } from "./language-context"
 
 interface Chapter {
     title: string
@@ -85,6 +86,7 @@ const MISSIONS = {
 
 export default function GuidedTaleGenerator() {
     const { user } = useAuth()
+    const { language, t } = useLanguage()
     const {
         isGenerating,
         status,
@@ -146,6 +148,7 @@ export default function GuidedTaleGenerator() {
                     mission: formData.mission,
                     visual_style: formData.visualStyle,
                     num_chapters: parseInt(formData.numChapters),
+                    lang: language
                 },
                 session.access_token,
                 "/stories/generate_guided_story_async"
@@ -163,14 +166,14 @@ export default function GuidedTaleGenerator() {
                 <CardHeader>
                     <CardTitle className="flex items-center gap-2">
                         <Compass className="h-5 w-5 text-teal-600" />
-                        Guided Story Configuration
+                        {t("guided_tale.title")}
                     </CardTitle>
-                    <CardDescription>Customize your educational adventure!</CardDescription>
+                    <CardDescription>{t("guided_tale.description")}</CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-6">
                     {/* Age Selection */}
                     <div className="space-y-2">
-                        <Label>Age Group</Label>
+                        <Label>{t("guided_tale.age_group")}</Label>
                         <RadioGroup
                             className="flex gap-4"
                             value={formData.age}
@@ -178,18 +181,18 @@ export default function GuidedTaleGenerator() {
                         >
                             <div className="flex items-center space-x-2">
                                 <RadioGroupItem value="3-5" id="age-3-5" />
-                                <Label htmlFor="age-3-5">3-5 Years</Label>
+                                <Label htmlFor="age-3-5">{t("guided_tale.age_3_5")}</Label>
                             </div>
                             <div className="flex items-center space-x-2">
                                 <RadioGroupItem value="5-8" id="age-5-8" />
-                                <Label htmlFor="age-5-8">6-8 Years</Label>
+                                <Label htmlFor="age-5-8">{t("guided_tale.age_5_8")}</Label>
                             </div>
                         </RadioGroup>
                     </div>
 
                     {/* Chapter Length */}
                     <div className="space-y-2">
-                        <Label>Story Length</Label>
+                        <Label>{t("guided_tale.story_length")}</Label>
                         <RadioGroup
                             className="flex gap-4"
                             value={formData.numChapters}
@@ -197,15 +200,15 @@ export default function GuidedTaleGenerator() {
                         >
                             <div className="flex items-center space-x-2">
                                 <RadioGroupItem value="3" id="chapters-3" />
-                                <Label htmlFor="chapters-3">Short (3 Chapters)</Label>
+                                <Label htmlFor="chapters-3">{t("guided_tale.short")}</Label>
                             </div>
                             <div className="flex items-center space-x-2">
                                 <RadioGroupItem value="6" id="chapters-6" />
-                                <Label htmlFor="chapters-6">Medium (6 Chapters)</Label>
+                                <Label htmlFor="chapters-6">{t("guided_tale.medium")}</Label>
                             </div>
                             <div className="flex items-center space-x-2">
                                 <RadioGroupItem value="9" id="chapters-9" />
-                                <Label htmlFor="chapters-9">Long (9 Chapters)</Label>
+                                <Label htmlFor="chapters-9">{t("guided_tale.long")}</Label>
                             </div>
                         </RadioGroup>
                     </div>
@@ -213,19 +216,19 @@ export default function GuidedTaleGenerator() {
                     {/* Protagonist */}
                     <div className="grid md:grid-cols-2 gap-4">
                         <div className="space-y-2">
-                            <Label htmlFor="protagonistName">Protagonist Name</Label>
+                            <Label htmlFor="protagonistName">{t("guided_tale.protagonist_name")}</Label>
                             <Input
                                 id="protagonistName"
-                                placeholder="e.g. Luna"
+                                placeholder={t("guided_tale.protagonist_name_placeholder")}
                                 value={formData.protagonistName}
                                 onChange={(e) => handleInputChange("protagonistName", e.target.value)}
                             />
                         </div>
                         <div className="space-y-2">
-                            <Label htmlFor="protagonistDesc">Protagonist Description</Label>
+                            <Label htmlFor="protagonistDesc">{t("guided_tale.protagonist_desc")}</Label>
                             <Input
                                 id="protagonistDesc"
-                                placeholder="e.g. A brave little cat"
+                                placeholder={t("guided_tale.protagonist_desc_placeholder")}
                                 value={formData.protagonistDesc}
                                 onChange={(e) => handleInputChange("protagonistDesc", e.target.value)}
                             />
@@ -234,7 +237,7 @@ export default function GuidedTaleGenerator() {
 
                     {/* Scientific Topic - Native Select */}
                     <div className="space-y-2">
-                        <Label htmlFor="scientificTopic">Scientific Topic</Label>
+                        <Label htmlFor="scientificTopic">{t("guided_tale.scientific_topic")}</Label>
                         <div className="relative">
                             <select
                                 id="scientificTopic"
@@ -243,11 +246,11 @@ export default function GuidedTaleGenerator() {
                                 onChange={(e) => handleInputChange("scientificTopic", e.target.value)}
                                 disabled={!formData.age}
                             >
-                                <option value="" disabled>Select a topic</option>
+                                <option value="" disabled>{t("guided_tale.select_topic")}</option>
                                 {formData.age &&
                                     SCIENTIFIC_TOPICS[formData.age as keyof typeof SCIENTIFIC_TOPICS]?.map((topic) => (
                                         <option key={topic.value} value={topic.value}>
-                                            {topic.label}
+                                            {t(`guided_tale.topics.${topic.value}`)}
                                         </option>
                                     ))}
                             </select>
@@ -261,7 +264,7 @@ export default function GuidedTaleGenerator() {
 
                     {/* Mission - Native Select */}
                     <div className="space-y-2">
-                        <Label htmlFor="mission">Mission</Label>
+                        <Label htmlFor="mission">{t("guided_tale.mission")}</Label>
                         <div className="relative">
                             <select
                                 id="mission"
@@ -270,11 +273,11 @@ export default function GuidedTaleGenerator() {
                                 onChange={(e) => handleInputChange("mission", e.target.value)}
                                 disabled={!formData.scientificTopic}
                             >
-                                <option value="" disabled>Select a mission</option>
+                                <option value="" disabled>{t("guided_tale.select_mission")}</option>
                                 {formData.scientificTopic &&
                                     MISSIONS[formData.scientificTopic as keyof typeof MISSIONS]?.map((mission) => (
                                         <option key={mission.value} value={mission.value}>
-                                            {mission.label}
+                                            {t(`guided_tale.missions.${mission.value}`)}
                                         </option>
                                     ))}
                             </select>
@@ -288,7 +291,7 @@ export default function GuidedTaleGenerator() {
 
                     {/* Visual Style */}
                     <div className="space-y-2">
-                        <Label>Visual Style</Label>
+                        <Label>{t("guided_tale.visual_style")}</Label>
                         <RadioGroup
                             className="flex flex-wrap gap-4"
                             value={formData.visualStyle}
@@ -296,27 +299,27 @@ export default function GuidedTaleGenerator() {
                         >
                             <div className="flex items-center space-x-2">
                                 <RadioGroupItem value="cartoons" id="style-cartoons" />
-                                <Label htmlFor="style-cartoons">Dibujos animados</Label>
+                                <Label htmlFor="style-cartoons">{t("styles.cartoons")}</Label>
                             </div>
                             <div className="flex items-center space-x-2">
                                 <RadioGroupItem value="watercolor" id="style-watercolor" />
-                                <Label htmlFor="style-watercolor">Acuarela</Label>
+                                <Label htmlFor="style-watercolor">{t("styles.watercolor")}</Label>
                             </div>
                             <div className="flex items-center space-x-2">
                                 <RadioGroupItem value="3d_animation" id="style-3d" />
-                                <Label htmlFor="style-3d">Animación 3D</Label>
+                                <Label htmlFor="style-3d">{t("styles.3d_animation")}</Label>
                             </div>
                             <div className="flex items-center space-x-2">
                                 <RadioGroupItem value="anime" id="style-anime" />
-                                <Label htmlFor="style-anime">Anime</Label>
+                                <Label htmlFor="style-anime">{t("styles.anime")}</Label>
                             </div>
                             <div className="flex items-center space-x-2">
                                 <RadioGroupItem value="child_crayons" id="style-child" />
-                                <Label htmlFor="style-child">Dibujo infantil</Label>
+                                <Label htmlFor="style-child">{t("styles.child_crayons")}</Label>
                             </div>
                             <div className="flex items-center space-x-2">
                                 <RadioGroupItem value="illustratio" id="style-illustratio" />
-                                <Label htmlFor="style-illustratio">Ilustración</Label>
+                                <Label htmlFor="style-illustratio">{t("styles.illustratio")}</Label>
                             </div>
                         </RadioGroup>
                     </div>
@@ -333,7 +336,7 @@ export default function GuidedTaleGenerator() {
                     {isGenerating && (
                         <div className="bg-blue-50 text-blue-600 p-3 rounded-md flex items-center gap-2 text-sm">
                             <Loader2 className="h-4 w-4 animate-spin" />
-                            Generating your story... Status: {status}
+                            {t("guided_tale.generating")} {t("guided_tale.status")}: {status}
                         </div>
                     )}
 
@@ -346,12 +349,12 @@ export default function GuidedTaleGenerator() {
                         {isGenerating ? (
                             <>
                                 <Loader2 className="mr-2 h-5 w-5 animate-spin" />
-                                Generating...
+                                {t("common.loading")}...
                             </>
                         ) : (
                             <>
                                 <Sparkles className="mr-2 h-5 w-5" />
-                                Generate Guided Story with images Async
+                                {t("guided_tale.generate_button")}
                             </>
                         )}
                     </Button>

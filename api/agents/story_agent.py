@@ -5,7 +5,7 @@ import logging
 from langchain_groq import ChatGroq
 from langgraph.graph import StateGraph, START, END
 
-from api.prompts.story_prompts import get_story_system_prompt, IMAGE_PROMPT_SYSTEM, DEFAULT_NUM_CHAPTERS, WORDS_PER_CHAPTER
+from api.prompts.story_prompts import get_story_system_prompt, get_image_prompt_system, DEFAULT_NUM_CHAPTERS, WORDS_PER_CHAPTER
 # Import utilities from the sibling module
 from .utils import (
     Story, 
@@ -42,7 +42,7 @@ image_llm = ChatGroq(
 )
 logger.info("image_llm ready")
 
-def make_image_prompt(text: str, style_context: str = None) -> str:
+def make_image_prompt(text: str, lang: str = "en", style_context: str = None) -> str:
     """Use LLM to create an image prompt for children's illustrations (non-realistic)."""
     try:
         user_content = f"Story text:\n\n{text[:2000]}"
@@ -52,7 +52,7 @@ def make_image_prompt(text: str, style_context: str = None) -> str:
         response = image_llm.invoke([
             {
                 "role": "system",
-                "content": IMAGE_PROMPT_SYSTEM,
+                "content": get_image_prompt_system(lang),
             },
             {"role": "user", "content": user_content},
         ])
@@ -73,9 +73,10 @@ def story_generation_node(state: StoryState):
     logger.info("Node: story_generation")
     messages = state.get("messages", [])
     num_chapters = state.get("num_chapters", DEFAULT_NUM_CHAPTERS)
+    lang = state.get("language", "en") or "en"
     
     # Construir mensajes con system prompt dinamico
-    system_prompt = get_story_system_prompt(num_chapters)
+    system_prompt = get_story_system_prompt(lang, num_chapters)
     full_messages = [
         {"role": "system", "content": system_prompt},
         *messages
@@ -139,8 +140,9 @@ def image_generation_node(state: StoryState):
     
     # Cover image
     logger.info("Generating cover image...")
+    lang = state.get("language", "en") or "en"
     cover_text = f"Book cover for: {story.title}\n\nChapters: {', '.join(c.title for c in story.chapters)}"
-    cover_prompt = make_image_prompt(cover_text, style_context=image_style_context)
+    cover_prompt = make_image_prompt(cover_text, lang=lang, style_context=image_style_context)
     story.cover_image_url = generate_image(cover_prompt, image_type="cover", model=model)
     logger.info("Cover image URL (Supabase): %s", story.cover_image_url)
     
@@ -149,7 +151,7 @@ def image_generation_node(state: StoryState):
     for idx, chapter in enumerate(story.chapters, 1):
         logger.info(f"Chapter {idx}: {chapter.title}")
         chapter_text = f"{chapter.title}\n\n{chapter.content[:1500]}"
-        chapter_prompt = make_image_prompt(chapter_text, style_context=image_style_context)
+        chapter_prompt = make_image_prompt(chapter_text, lang=lang, style_context=image_style_context)
         chapter.image_url = generate_image(chapter_prompt, image_type="chapter", model=model)
         logger.info("Chapter %d image URL (Supabase): %s", idx, chapter.image_url)
     
