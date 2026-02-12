@@ -1,3 +1,4 @@
+"use client"
 import { Button } from "@/components/ui/button"
 import { Sparkles, BookOpen, Users } from "lucide-react"
 import Navbar from "@/components/navbar"

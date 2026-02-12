@@ -1,3 +1,4 @@
+"use client"
 import Navbar from "@/components/navbar"
 import { BookOpen, Heart, Users, Sparkles, Target, Lightbulb } from "lucide-react"
 import { useLanguage } from "@/components/language-context"

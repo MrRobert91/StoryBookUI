@@ -1,3 +1,4 @@
+"use client"
 import Navbar from "@/components/navbar"
 import FAQSection from "@/components/faq-section"
 import { useLanguage } from "@/components/language-context"
