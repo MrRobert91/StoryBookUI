@@ -275,5 +275,27 @@
         "copy_success": "Story copied to clipboard! (PDF not available for this story)",
         "copy_story": "Copy Story",
         "anonymous": "Anonymous"
+    },
+    "make_tale_choice": {
+        "title": "✨ Create Your Magical Tale",
+        "subtitle": "Choose how you want to create your story today!",
+        "open_story": {
+            "title": "Open Story",
+            "description": "Unleash your imagination! Write a prompt and let AI weave a unique tale from scratch.",
+            "note": "Perfect for those who have a specific idea in mind.",
+            "button": "Create Open Story"
+        },
+        "guided_story": {
+            "title": "Guided Story",
+            "description": "Follow a magical path! Select key elements like age, theme, and mission to build your story step-by-step.",
+            "note": "Great for structured storytelling and educational themes.",
+            "button": "Create Guided Story"
+        },
+        "sign_in": {
+            "title": "Sign in to Create Stories",
+            "description": "Join Cuentee to start creating personalized, magical stories for your family. It's free to get started!",
+            "button_start": "Get Started Free",
+            "button_login": "Sign In"
+        }
     }
 }

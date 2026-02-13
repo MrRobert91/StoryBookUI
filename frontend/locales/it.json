@@ -275,5 +275,27 @@
         "copy_success": "Storia copiata negli appunti! (PDF non disponibile per questa storia)",
         "copy_story": "Copia Storia",
         "anonymous": "Anonimo"
+    },
+    "make_tale_choice": {
+        "title": "✨ Crea la tua Favola Magica",
+        "subtitle": "Scegli come vuoi creare la tua storia oggi!",
+        "open_story": {
+            "title": "Storia Libera",
+            "description": "Libera la tua immaginazione! Scrivi un'idea e lascia che l'IA tessa un racconto unico da zero.",
+            "note": "Perfetto per chi ha in mente un'idea specifica.",
+            "button": "Crea Storia Libera"
+        },
+        "guided_story": {
+            "title": "Storia Guidata",
+            "description": "Segui un sentiero magico! Seleziona elementi chiave come età, tema e missione per costruire la tua storia passo dopo passo.",
+            "note": "Ottimo per narrazioni strutturate e temi educativi.",
+            "button": "Crea Storia Guidata"
+        },
+        "sign_in": {
+            "title": "Accedi per Creare Storie",
+            "description": "Unisciti a Cuentee per iniziare a creare storie magiche e personalizzate per la tua famiglia. Iniziare è gratis!",
+            "button_start": "Inizia Gratis",
+            "button_login": "Accedi"
+        }
     }
 }

@@ -275,5 +275,27 @@
         "copy_success": "Geschichte in die Zwischenablage kopiert! (PDF für diese Geschichte nicht verfügbar)",
         "copy_story": "Geschichte Kopieren",
         "anonymous": "Anonym"
+    },
+    "make_tale_choice": {
+        "title": "✨ Erstellen Sie Ihr Magisches Märchen",
+        "subtitle": "Wählen Sie, wie Sie Ihre Geschichte heute erstellen möchten!",
+        "open_story": {
+            "title": "Offene Geschichte",
+            "description": "Lassen Sie Ihrer Fantasie freien Lauf! Schreiben Sie eine Idee und lassen Sie die KI eine einzigartige Geschichte von Grund auf weben.",
+            "note": "Perfekt für diejenigen, die eine bestimmte Idee im Kopf haben.",
+            "button": "Offene Geschichte Erstellen"
+        },
+        "guided_story": {
+            "title": "Geführte Geschichte",
+            "description": "Folgen Sie einem magischen Pfad! Wählen Sie Schlüsselelemente wie Alter, Thema und Mission, um Ihre Geschichte Schritt für Schritt aufzubauen.",
+            "note": "Großartig für strukturiertes Geschichtenerzählen und Bildungsthemen.",
+            "button": "Geführte Geschichte Erstellen"
+        },
+        "sign_in": {
+            "title": "Melden Sie sich an, um Geschichten zu erstellen",
+            "description": "Treten Sie Cuentee bei, um personalisierte, magische Geschichten für Ihre Familie zu erstellen. Der Einstieg ist kostenlos!",
+            "button_start": "Kostenlos Starten",
+            "button_login": "Anmelden"
+        }
     }
 }

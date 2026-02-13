@@ -275,5 +275,27 @@
         "copy_success": "História copiada para a área de transferência! (PDF não disponível para esta história)",
         "copy_story": "Copiar História",
         "anonymous": "Anônimo"
+    },
+    "make_tale_choice": {
+        "title": "✨ Crie seu Conto Mágico",
+        "subtitle": "Escolha como você quer criar sua história hoje!",
+        "open_story": {
+            "title": "História Aberta",
+            "description": "Liberte sua imaginação! Escreva uma ideia e deixe a IA tecer um conto único do zero.",
+            "note": "Perfeito para quem tem uma ideia específica em mente.",
+            "button": "Criar História Aberta"
+        },
+        "guided_story": {
+            "title": "História Guiada",
+            "description": "Siga um caminho mágico! Selecione elementos-chave como idade, tema e missão para construir sua história passo a passo.",
+            "note": "Ótimo para narrativas estruturadas e temas educativos.",
+            "button": "Criar História Guiada"
+        },
+        "sign_in": {
+            "title": "Entre para Criar Histórias",
+            "description": "Junte-se à Cuentee para começar a criar histórias mágicas e personalizadas para sua família. É grátis para começar!",
+            "button_start": "Começar Grátis",
+            "button_login": "Entrar"
+        }
     }
 }
