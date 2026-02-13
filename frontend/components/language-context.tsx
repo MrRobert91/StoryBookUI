@@ -3,6 +3,10 @@
 import React, { createContext, useContext, useState, useEffect } from "react"
 import en from "../locales/en.json"
 import es from "../locales/es.json"
+import fr from "../locales/fr.json"
+import pt from "../locales/pt.json"
+import it from "../locales/it.json"
+import de from "../locales/de.json"
 
 type Language = "en" | "es" | "fr" | "pt" | "it" | "de"
 
@@ -15,11 +19,10 @@ interface LanguageContextType {
 const translations: Record<string, any> = {
     en,
     es,
-    // Placeholders for other languages until they are created
-    fr: en,
-    pt: en,
-    it: en,
-    de: en,
+    fr,
+    pt,
+    it,
+    de,
 }
 
 const LanguageContext = createContext<LanguageContextType | undefined>(undefined)
