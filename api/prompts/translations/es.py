@@ -3,7 +3,7 @@ VISUAL_STYLE_PROMPTS = {
         "Estilo de dibujos animados vectoriales modernos y de alta calidad. "
         "Colores planos y vibrantes, líneas de contorno limpias y audaces. "
         "Diseño de personajes expresivo y 'cute', formas redondeadas y amigables. "
-        "Sin texturas complejas, estéticaminimalista pero detallada en composición. "
+        "Sin texturas complejas, estética minimalista pero detallada en composición. "
         "Iluminación suave y uniforme, estilo visual similar a aplicaciones educativas modernas."
     ),
     "watercolor": (
@@ -47,7 +47,7 @@ VISUAL_STYLE_PROMPTS = {
 
 TOPIC_PROMPTS = {
     "shapes_sizes": "geometría básica: identificación de formas (círculo, cuadrado, triángulo) y comparación de tamaños (grande, mediano, pequeño).",
-    "human_body": "partes del cuerpo y los cinco sentidos. Reconocimiento básico de funciones corporales simmples.",
+    "human_body": "partes del cuerpo y los cinco sentidos. Reconocimiento básico de funciones corporales simples.",
     "sound": "física del sonido: vibraciones, eco, tipos de sonidos (graves/agudos) y el silencio.",
     "water_changes": "ciclo del agua y estados de la materia (sólido, líquido, gas) de forma introductoria.",
     "feelings": "inteligencia emocional: reconocer y nombrar emociones básicas (alegría, tristeza, enfado, miedo) y estrategias simples para gestionarlas.",
@@ -89,7 +89,7 @@ MISSION_PROMPTS = {
     "mysterious_echo": (
         "El protagonista explora una cueva donde el eco no repite, sino que responde. "
         "Descubra que el sonido viaja como ondas invisibles y rebota en las paredes. "
-        "La misión es usar el eco para encontrar la salida de un liberto oscuro."
+        "La misión es usar el eco para encontrar la salida de un laberinto oscuro."
     ),
     "traveling_drop": (
         "El protagonista se encoge al tamaño microscópico y monta sobre una gota de agua llamada 'Flu'. "
