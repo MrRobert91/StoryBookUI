@@ -18,6 +18,8 @@ interface Chapter {
 }
 
 export default function TaleGenerator() {
+  const STOP_RECORDING_DELAY_MS = 1000
+
   const { user, loading: authLoading } = useAuth()
   const { language, t } = useLanguage()
   const {
@@ -44,6 +46,8 @@ export default function TaleGenerator() {
   const [isRecording, setIsRecording] = useState(false)
   const mediaRecorderRef = useRef<MediaRecorder | null>(null)
   const socketRef = useRef<WebSocket | null>(null)
+  const stopTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const isStoppingRecordingRef = useRef(false)
 
   const asyncStorySavedRef = useRef(false)
 
@@ -67,7 +71,7 @@ export default function TaleGenerator() {
 
   const toggleRecording = async () => {
     if (isRecording) {
-      stopRecording()
+      await stopRecording()
     } else {
       await startRecording()
     }
@@ -75,6 +79,14 @@ export default function TaleGenerator() {
 
   const startRecording = async () => {
     try {
+      if (isStoppingRecordingRef.current) {
+        return
+      }
+
+      if (isRecording) {
+        return
+      }
+
       if (!user) {
         setApiError("Authentication required for voice input.")
         return
@@ -129,14 +141,12 @@ export default function TaleGenerator() {
       ws.onerror = (e) => {
         console.error("WebSocket error:", e)
         setApiError("Error connecting to transcription service.")
-        stopRecording()
+        void stopRecording(false)
       }
 
       ws.onclose = () => {
         console.log("WebSocket Disconnected")
-        if (isRecording) {
-          stopRecording() // Ensure UI updates if server closes connection
-        }
+        socketRef.current = null
       }
 
       socketRef.current = ws
@@ -147,26 +157,64 @@ export default function TaleGenerator() {
     }
   }
 
-  const stopRecording = () => {
+  const finalizeStopRecording = () => {
     if (mediaRecorderRef.current && mediaRecorderRef.current.state !== 'inactive') {
       mediaRecorderRef.current.stop()
-      mediaRecorderRef.current.stream.getTracks().forEach(track => track.stop())
+      mediaRecorderRef.current.stream.getTracks().forEach((track) => track.stop())
     }
+
     if (socketRef.current) {
       // Avoid calling close if already closed to prevent errors
       if (socketRef.current.readyState === WebSocket.OPEN || socketRef.current.readyState === WebSocket.CONNECTING) {
         socketRef.current.close()
       }
     }
-    setIsRecording(false)
+
     mediaRecorderRef.current = null
     socketRef.current = null
+  }
+
+  const stopRecording = async (withDelay = true) => {
+    // Visual feedback should stop immediately
+    setIsRecording(false)
+
+    if (stopTimeoutRef.current) {
+      clearTimeout(stopTimeoutRef.current)
+      stopTimeoutRef.current = null
+    }
+
+    const hasActiveRecorder = !!mediaRecorderRef.current && mediaRecorderRef.current.state !== "inactive"
+    const hasOpenSocket =
+      !!socketRef.current &&
+      (socketRef.current.readyState === WebSocket.OPEN || socketRef.current.readyState === WebSocket.CONNECTING)
+
+    if (!hasActiveRecorder && !hasOpenSocket) {
+      isStoppingRecordingRef.current = false
+      return
+    }
+
+    if (!withDelay) {
+      isStoppingRecordingRef.current = false
+      finalizeStopRecording()
+      return
+    }
+
+    isStoppingRecordingRef.current = true
+
+    await new Promise<void>((resolve) => {
+      stopTimeoutRef.current = setTimeout(() => {
+        finalizeStopRecording()
+        isStoppingRecordingRef.current = false
+        stopTimeoutRef.current = null
+        resolve()
+      }, STOP_RECORDING_DELAY_MS)
+    })
   }
 
   // Cleanup on unmount
   useEffect(() => {
     return () => {
-      stopRecording()
+      void stopRecording(false)
     }
   }, [])
 
@@ -192,6 +240,10 @@ export default function TaleGenerator() {
   }, [asyncError])
 
   const handleGenerateStoryAsync = async () => {
+    if (isRecording || isStoppingRecordingRef.current) {
+      await stopRecording(true)
+    }
+
     if (!prompt.trim()) return
     if (!user) {
       setApiError("You must be logged in to generate stories.")
