@@ -6,3 +6,6 @@ dist/
 __pycache__/
 *.pyc
 .next/
+
+# Resultados y scripts de evaluación LLM offline
+llm_evaluation/
