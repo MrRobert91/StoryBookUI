@@ -17,12 +17,15 @@ load_dotenv()
 logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s [%(name)s] %(message)s")
 logger = logging.getLogger(__name__)
 
+from langsmith import traceable
+from langsmith.wrappers import wrap_openai
+
 # Cargar API keys
 openai_key = os.getenv("OPENAI_API_KEY")
 if not openai_key:
     raise EnvironmentError("OPENAI_API_KEY not found. Set it in your .env file.")
 
-client = OpenAI(api_key=openai_key)
+client = wrap_openai(OpenAI(api_key=openai_key))
 
 # ============================================================================
 # SUPABASE S3 STORAGE CONFIGURATION
@@ -85,7 +88,15 @@ def get_s3_client():
     return _cached_s3_client
 
 def upload_image_bytes_to_supabase(image_data: bytes, image_type: str) -> str:
-    """Upload raw image bytes to Supabase Storage."""
+    """Upload raw image bytes to Supabase Storage and attach to LangSmith."""
+    try:
+        from langsmith import get_current_run
+        run = get_current_run()
+        if run:
+            run.add_attachment(f"{image_type}.png", image_data, "image/png")
+    except Exception as e:
+        logger.warning(f"Failed to attach image to LangSmith: {e}")
+
     if not _current_user_id or not _current_jwt_token:
         logger.error("User context not set. Cannot upload to Supabase.")
         return ""
@@ -178,6 +189,7 @@ DEFAULT_IMAGE_MODEL = os.getenv("IMAGE_MODEL", "dall-e-3").strip().lower()
 SELECTED_IMAGE_MODEL = IMAGE_MODELS.get(DEFAULT_IMAGE_MODEL, "dall-e-3")
 _image_counter = {"cover": 0, "chapter": 0}
 
+@traceable(run_type="tool", name="image_generation")
 def generate_image(prompt: str, model: str = None, image_type: str = "image") -> str:
     """Generate image using OpenAI and upload to Supabase."""
     model_name = IMAGE_MODELS.get((model or SELECTED_IMAGE_MODEL).lower(), SELECTED_IMAGE_MODEL)

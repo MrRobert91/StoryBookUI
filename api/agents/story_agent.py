@@ -42,6 +42,9 @@ image_llm = ChatGroq(
 )
 logger.info("image_llm ready")
 
+from langsmith import traceable
+
+@traceable(run_type="chain", name="make_image_prompt")
 def make_image_prompt(text: str, lang: str = "en", style_context: str = None) -> str:
     """Use LLM to create an image prompt for children's illustrations (non-realistic)."""
     try:
