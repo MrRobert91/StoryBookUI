@@ -24,7 +24,7 @@ BEGIN
   -- Insert profile with minimal data
   BEGIN
     INSERT INTO public.profiles (id, username, credits, plan, created_at)
-    VALUES (NEW.id, temp_username, 10, 'free', NOW());
+    VALUES (NEW.id, temp_username, 3, 'free', NOW());
     
     RAISE LOG 'Temporary profile created for user %', NEW.id;
   EXCEPTION

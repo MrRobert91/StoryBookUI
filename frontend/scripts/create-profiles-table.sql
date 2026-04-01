@@ -1,7 +1,7 @@
 -- Create profiles table for storing user-specific data like credits and plan
 CREATE TABLE IF NOT EXISTS profiles (
   id UUID REFERENCES auth.users(id) ON DELETE CASCADE PRIMARY KEY,
-  credits INTEGER NOT NULL DEFAULT 10,
+  credits INTEGER NOT NULL DEFAULT 3,
   plan TEXT NOT NULL DEFAULT 'free', -- 'free' or 'plus'
   plus_since TIMESTAMP WITH TIME ZONE, -- Date when user subscribed to 'plus' plan
   last_credited_at TIMESTAMP WITH TIME ZONE, -- Last time credits were automatically added
@@ -32,7 +32,7 @@ CREATE OR REPLACE FUNCTION public.handle_new_user()
 RETURNS TRIGGER AS $$
 BEGIN
   INSERT INTO public.profiles (id, credits, plan, created_at)
-  VALUES (NEW.id, 10, 'free', NOW());
+  VALUES (NEW.id, 3, 'free', NOW());
   RETURN NEW;
 END;
 $$ LANGUAGE plpgsql SECURITY DEFINER;
