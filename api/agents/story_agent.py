@@ -2,6 +2,7 @@ import os
 import uuid
 import json
 import logging
+import re
 from langchain_groq import ChatGroq
 from langgraph.graph import StateGraph, START, END
 
@@ -67,6 +68,76 @@ def make_image_prompt(text: str, lang: str = "en", style_context: str = None) ->
         logger.error("Error creating image prompt: %s", e)
         base = (text[:500] if text else "A friendly fantasy scene")
         return f"{base}"
+
+
+def _parse_character_lines(character_descriptions: str) -> list[tuple[str, str]]:
+    """Parse '- Name: description' lines into (name, full_line) tuples."""
+    parsed: list[tuple[str, str]] = []
+    if not character_descriptions:
+        return parsed
+
+    for raw_line in character_descriptions.splitlines():
+        line = raw_line.strip()
+        if not line.startswith("- "):
+            continue
+
+        body = line[2:].strip()
+        if ":" not in body:
+            continue
+
+        name, _ = body.split(":", 1)
+        name = name.strip()
+        if not name:
+            continue
+
+        parsed.append((name, line))
+    return parsed
+
+
+def _name_variants(name: str) -> list[str]:
+    """Generate search variants for a character name."""
+    cleaned = re.sub(r"[^\w\s'-]", "", name, flags=re.UNICODE).strip()
+    if not cleaned:
+        return []
+
+    tokens = [t for t in cleaned.split() if len(t) >= 3]
+    variants = [cleaned, *tokens]
+
+    # Deduplicate while preserving order
+    unique_variants: list[str] = []
+    seen = set()
+    for variant in variants:
+        key = variant.lower()
+        if key not in seen:
+            seen.add(key)
+            unique_variants.append(variant)
+    return unique_variants
+
+
+def _build_chapter_character_block(character_descriptions: str, chapter_text: str) -> str:
+    """Return only character lines that appear in chapter text/title."""
+    chapter = chapter_text or ""
+    if not character_descriptions or not chapter:
+        return ""
+
+    parsed = _parse_character_lines(character_descriptions)
+    if not parsed:
+        return ""
+
+    matched_lines: list[str] = []
+    for name, line in parsed:
+        variants = _name_variants(name)
+        if any(re.search(rf"\b{re.escape(v)}\b", chapter, flags=re.IGNORECASE) for v in variants):
+            matched_lines.append(line)
+
+    if not matched_lines:
+        return ""
+
+    return (
+        "CHARACTER CONSISTENCY (Only characters present in this chapter; match exactly):\n"
+        + "\n".join(matched_lines)
+        + "\n\n"
+    )
 
 # ============================================================================
 # WORKFLOW NODES
@@ -173,15 +244,7 @@ def image_generation_node(state: StoryState):
     user_id = state.get("user_id")
     jwt_token = state.get("jwt_token")
     image_style_context = state.get("image_style_context") or ""
-
-    # Prepend character descriptions for visual consistency
     character_descriptions = state.get("character_descriptions")
-    if character_descriptions:
-        character_block = (
-            f"CHARACTER CONSISTENCY (All characters MUST match these descriptions in EVERY illustration):\n"
-            f"{character_descriptions}\n\n"
-        )
-        image_style_context = character_block + image_style_context
     
     if not user_id or not jwt_token:
         logger.error("user_id or jwt_token not provided in state")
@@ -205,7 +268,14 @@ def image_generation_node(state: StoryState):
     logger.info("Generating cover image...")
     lang = state.get("language", "en") or "en"
     cover_text = f"Book cover for: {story.title}\n\nChapters: {', '.join(c.title for c in story.chapters)}"
-    cover_prompt = make_image_prompt(cover_text, lang=lang, style_context=image_style_context)
+    cover_style_context = image_style_context
+    if character_descriptions:
+        cover_style_context = (
+            "CHARACTER CONSISTENCY (Use only relevant characters for the cover scene):\n"
+            f"{character_descriptions}\n\n"
+        ) + image_style_context
+
+    cover_prompt = make_image_prompt(cover_text, lang=lang, style_context=cover_style_context)
     story.cover_image_url = generate_image(cover_prompt, image_type="cover", model=model)
     logger.info("Cover image URL (Supabase): %s", story.cover_image_url)
     
@@ -214,7 +284,14 @@ def image_generation_node(state: StoryState):
     for idx, chapter in enumerate(story.chapters, 1):
         logger.info(f"Chapter {idx}: {chapter.title}")
         chapter_text = f"{chapter.title}\n\n{chapter.content[:1500]}"
-        chapter_prompt = make_image_prompt(chapter_text, lang=lang, style_context=image_style_context)
+
+        chapter_character_block = _build_chapter_character_block(character_descriptions or "", chapter_text)
+        chapter_style_context = f"{chapter_character_block}{image_style_context}".strip()
+        chapter_prompt = make_image_prompt(
+            chapter_text,
+            lang=lang,
+            style_context=chapter_style_context if chapter_style_context else None
+        )
         chapter.image_url = generate_image(chapter_prompt, image_type="chapter", model=model)
         logger.info("Chapter %d image URL (Supabase): %s", idx, chapter.image_url)
     
