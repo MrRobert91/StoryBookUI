@@ -8,7 +8,8 @@
       "Bash(mkdir -p results/story_generation results/story_safety_evaluation)",
       "Bash(mv story_generation/* results/story_generation/)",
       "Bash(mv story_safety_evaluation/* results/story_safety_evaluation/)",
-      "Bash(rmdir story_generation story_safety_evaluation)"
+      "Bash(rmdir story_generation story_safety_evaluation)",
+      "WebFetch(domain:www.cuentee.com)"
     ]
   }
 }
