@@ -51,7 +51,18 @@ def make_image_prompt(text: str, lang: str = "en", style_context: str = None) ->
     try:
         user_content = f"Story text:\n\n{text[:2000]}"
         if style_context:
-            user_content = f"VISUAL STYLE/CHARACTER INSTRUCTIONS:\n{style_context}\n\n" + user_content
+            consistency_rules = (
+                "CHARACTER CONSISTENCY RULES:\n"
+                "- If a listed character appears in this scene, copy that character description exactly as provided.\n"
+                "- Do not change stable traits across chapters (body type, hair type/color, eye color, skin/fur/scale color, outfit type/colors).\n"
+                "- Use simple, concrete wording in the final image prompt.\n"
+                "- Do not use subjective traits (e.g., warm smile, lively look, refreshing expression).\n\n"
+            )
+            user_content = (
+                f"VISUAL STYLE/CHARACTER INSTRUCTIONS:\n{style_context}\n\n"
+                f"{consistency_rules}"
+                + user_content
+            )
 
         response = image_llm.invoke([
             {
@@ -134,7 +145,9 @@ def _build_chapter_character_block(character_descriptions: str, chapter_text: st
         return ""
 
     return (
-        "CHARACTER CONSISTENCY (Only characters present in this chapter; match exactly):\n"
+        "CHARACTER CONSISTENCY (Only characters present in this chapter; use these exact visual specs):\n"
+        "Use each line as immutable reference for: body type/build, hair/fur style and color, eye color, skin/fur/scale color, outfit/garment type, garment colors, and distinctive physical markers.\n"
+        "Keep descriptions simple, precise, and concrete.\n"
         + "\n".join(matched_lines)
         + "\n\n"
     )
