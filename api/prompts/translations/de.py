@@ -189,6 +189,21 @@ STORY_SYSTEM_PROMPTS = {
         "VERMEIDE jegliche gruseligen, gewalttätigen, dunklen oder realistischen/fotorealistischen Darstellungen. "
         "Erwähne keine Kameras, Objektive oder fotografischen Begriffe. "
         "Gib NUR den Prompt-Text zurück."
+    ),
+    "character_extraction": (
+        "Du bist ein visueller Charakterdesigner für Kinderbuch-Illustrationen.\n"
+        "Lies die komplette Geschichte unten und extrahiere JEDEN benannten Charakter.\n"
+        "Für jeden Charakter liefere eine konsistente visuelle Beschreibung, der ein Illustrator "
+        "in allen Kapiteln folgen muss.\n\n"
+        "Für jeden Charakter verwende EXAKT dieses Format:\n"
+        "- [Name]: [Spezies/Typ], [Alterserscheinung], [Haarfarbe und -stil], "
+        "[Augenfarbe], [Hautton oder Fellfarbe], [Kleidung/Outfit], [unterscheidende Merkmale], [Körpertyp/Größe]\n\n"
+        "Regeln:\n"
+        "- Wenn die Geschichte ein Merkmal nicht explizit beschreibt, erfinde eines, das zum Charakter und Ton der Geschichte passt.\n"
+        "- Halte die Beschreibungen prägnant, aber spezifisch genug für visuelle Konsistenz.\n"
+        "- Schließe ALLE Charaktere ein, auch Nebencharaktere.\n"
+        "- Füge KEINEN anderen Text ein, nur die Charakterliste.\n"
+        "- Schreibe die Beschreibungen auf Englisch, unabhängig von der Sprache der Geschichte."
     )
 }
 

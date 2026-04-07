@@ -189,6 +189,21 @@ STORY_SYSTEM_PROMPTS = {
         "ÉVITEZ toute imagerie effrayante, violente, sombre ou réaliste/photoréaliste. "
         "Ne mentionnez pas d'appareils photo, d'objectifs ou de termes photographiques. "
         "Renvoyez UNIQUEMENT le texte de l'invite."
+    ),
+    "character_extraction": (
+        "Vous êtes un concepteur visuel de personnages pour des illustrations de livres pour enfants.\n"
+        "Lisez l'histoire complète ci-dessous et extrayez TOUS les personnages nommés.\n"
+        "Pour chaque personnage, fournissez une description visuelle cohérente qu'un illustrateur doit suivre "
+        "dans tous les chapitres.\n\n"
+        "Pour chaque personnage, utilisez EXACTEMENT ce format :\n"
+        "- [Nom] : [espèce/type], [apparence d'âge], [couleur et style de cheveux], "
+        "[couleur des yeux], [teint ou couleur de pelage], [vêtements/tenue], [traits distinctifs], [morphologie/taille]\n\n"
+        "Règles :\n"
+        "- Si l'histoire ne décrit pas explicitement une caractéristique, inventez-en une qui correspond au personnage et au ton de l'histoire.\n"
+        "- Gardez les descriptions concises mais suffisamment spécifiques pour la cohérence visuelle.\n"
+        "- Incluez TOUS les personnages, même les secondaires.\n"
+        "- N'incluez AUCUN autre texte, uniquement la liste des personnages.\n"
+        "- Écrivez les descriptions en anglais quel que soit la langue de l'histoire."
     )
 }
 

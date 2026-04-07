@@ -17,3 +17,7 @@ def get_image_prompt_system(lang: str = "en") -> str:
     prompts = get_localized_prompts(lang)
     return prompts["STORY_SYSTEM_PROMPTS"]["image_system"]
 
+def get_character_extraction_prompt(lang: str = "en") -> str:
+    prompts = get_localized_prompts(lang)
+    return prompts["STORY_SYSTEM_PROMPTS"]["character_extraction"]
+

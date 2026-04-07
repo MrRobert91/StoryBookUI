@@ -170,6 +170,7 @@ class StoryState(TypedDict):
     jwt_token: str | None
     model: str | None
     image_style_context: str | None
+    character_descriptions: str | None
     num_chapters: int | None
     story_type: str | None
     metadata: dict | None

@@ -5,7 +5,7 @@ import logging
 from langchain_groq import ChatGroq
 from langgraph.graph import StateGraph, START, END
 
-from api.prompts.story_prompts import get_story_system_prompt, get_image_prompt_system, DEFAULT_NUM_CHAPTERS, WORDS_PER_CHAPTER
+from api.prompts.story_prompts import get_story_system_prompt, get_image_prompt_system, get_character_extraction_prompt, DEFAULT_NUM_CHAPTERS, WORDS_PER_CHAPTER
 # Import utilities from the sibling module
 from .utils import (
     Story, 
@@ -115,13 +115,73 @@ def story_generation_node(state: StoryState):
         logger.exception(f"Error generating story: {e}")
         raise
 
+def character_extraction_node(state: StoryState):
+    """Extract character descriptions from the complete story for visual consistency."""
+    logger.info("Node: character_extraction")
+
+    story = state.get("story_data")
+    if not story:
+        logger.warning("No story_data found, skipping character extraction")
+        return {}
+
+    lang = state.get("language", "en") or "en"
+
+    # Build full story text
+    full_text = f"Title: {story.title}\n\n"
+    for ch in story.chapters:
+        full_text += f"## {ch.title}\n{ch.content}\n\n"
+
+    # Include existing protagonist info from guided stories if available
+    existing_context = state.get("image_style_context") or ""
+    protagonist_hint = ""
+    if "CHARACTER DESIGN:" in existing_context:
+        start = existing_context.index("CHARACTER DESIGN:")
+        end_offset = existing_context[start:].find("\n\n")
+        end = start + end_offset if end_offset != -1 else len(existing_context)
+        protagonist_hint = (
+            f"\n\nNote - the protagonist is already defined as:\n"
+            f"{existing_context[start:end]}\n"
+            f"Include this character in your list with these details preserved and enhanced.\n"
+        )
+
+    system_prompt = get_character_extraction_prompt(lang)
+
+    try:
+        response = image_llm.invoke([
+            {"role": "system", "content": system_prompt},
+            {"role": "user", "content": f"{full_text}{protagonist_hint}"}
+        ])
+
+        character_descriptions = response.content.strip() if hasattr(response, "content") else str(response).strip()
+        logger.info(f"Extracted characters:\n{character_descriptions[:500]}")
+
+        # Store in metadata for final output
+        story.metadata["characters"] = character_descriptions
+
+        return {
+            "character_descriptions": character_descriptions,
+            "story_data": story
+        }
+    except Exception as e:
+        logger.error(f"Error extracting characters: {e}")
+        return {}
+
 def image_generation_node(state: StoryState):
     """Generate images for cover and chapters and upload to Supabase Storage"""
     logger.info("Node: image_generation")
-    
+
     user_id = state.get("user_id")
     jwt_token = state.get("jwt_token")
-    image_style_context = state.get("image_style_context")
+    image_style_context = state.get("image_style_context") or ""
+
+    # Prepend character descriptions for visual consistency
+    character_descriptions = state.get("character_descriptions")
+    if character_descriptions:
+        character_block = (
+            f"CHARACTER CONSISTENCY (All characters MUST match these descriptions in EVERY illustration):\n"
+            f"{character_descriptions}\n\n"
+        )
+        image_style_context = character_block + image_style_context
     
     if not user_id or not jwt_token:
         logger.error("user_id or jwt_token not provided in state")
@@ -174,10 +234,12 @@ logger.info("Building workflow graph...")
 workflow = StateGraph(StoryState)
 
 workflow.add_node("generate_story", story_generation_node)
+workflow.add_node("extract_characters", character_extraction_node)
 workflow.add_node("generate_images", image_generation_node)
 
 workflow.add_edge(START, "generate_story")
-workflow.add_edge("generate_story", "generate_images")
+workflow.add_edge("generate_story", "extract_characters")
+workflow.add_edge("extract_characters", "generate_images")
 workflow.add_edge("generate_images", END)
 
 graph = workflow.compile()

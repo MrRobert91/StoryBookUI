@@ -190,6 +190,21 @@ STORY_SYSTEM_PROMPTS = {
         "EVITA cualquier imagen aterradora, violenta, oscura o realista/fotorrealista. "
         "No menciones cámaras, lentes ni términos fotográficos. "
         "Devuelve SOLO el texto del prompt."
+    ),
+    "character_extraction": (
+        "Eres un diseñador visual de personajes para ilustraciones de libros infantiles.\n"
+        "Lee el cuento completo a continuación y extrae TODOS los personajes con nombre.\n"
+        "Para cada personaje, proporciona una descripción visual consistente que un ilustrador debe seguir "
+        "en todos los capítulos.\n\n"
+        "Para cada personaje usa EXACTAMENTE este formato:\n"
+        "- [Nombre]: [especie/tipo], [apariencia de edad], [color y estilo de pelo], "
+        "[color de ojos], [tono de piel o color de pelaje], [ropa/vestimenta], [rasgos distintivos], [tipo de cuerpo/tamaño]\n\n"
+        "Reglas:\n"
+        "- Si el cuento no describe explícitamente una característica, inventa una que encaje con el personaje y el tono del cuento.\n"
+        "- Mantén las descripciones concisas pero lo suficientemente específicas para mantener consistencia visual.\n"
+        "- Incluye TODOS los personajes, incluso los secundarios.\n"
+        "- NO incluyas ningún otro texto, solo la lista de personajes.\n"
+        "- Escribe las descripciones en inglés independientemente del idioma del cuento."
     )
 }
 

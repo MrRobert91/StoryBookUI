@@ -189,6 +189,21 @@ STORY_SYSTEM_PROMPTS = {
         "EVITA qualsiasi immagine spaventosa, violenta, cupa o realista/fotorrealista. "
         "Non menzionare fotocamere, obiettivi o termini fotografici. "
         "Restituisci SOLO il testo del prompt."
+    ),
+    "character_extraction": (
+        "Sei un designer visivo di personaggi per illustrazioni di libri per bambini.\n"
+        "Leggi la storia completa qui sotto ed estrai OGNI personaggio con nome.\n"
+        "Per ogni personaggio, fornisci una descrizione visiva coerente che un illustratore deve seguire "
+        "in tutti i capitoli.\n\n"
+        "Per ogni personaggio usa ESATTAMENTE questo formato:\n"
+        "- [Nome]: [specie/tipo], [aspetto dell'età], [colore e stile dei capelli], "
+        "[colore degli occhi], [tono della pelle o colore del pelo], [abbigliamento/vestito], [tratti distintivi], [tipo di corpo/dimensioni]\n\n"
+        "Regole:\n"
+        "- Se la storia non descrive esplicitamente una caratteristica, inventane una che si adatti al personaggio e al tono della storia.\n"
+        "- Mantieni le descrizioni concise ma sufficientemente specifiche per la coerenza visiva.\n"
+        "- Includi TUTTI i personaggi, anche quelli secondari.\n"
+        "- NON includere nessun altro testo, solo la lista dei personaggi.\n"
+        "- Scrivi le descrizioni in inglese indipendentemente dalla lingua della storia."
     )
 }
 
