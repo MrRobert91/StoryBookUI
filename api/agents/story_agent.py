@@ -46,21 +46,24 @@ logger.info("image_llm ready")
 from langsmith import traceable
 
 @traceable(run_type="chain", name="make_image_prompt")
-def make_image_prompt(text: str, lang: str = "en", style_context: str = None) -> str:
-    """Use LLM to create an image prompt for children's illustrations (non-realistic)."""
+def make_image_prompt(
+    text: str,
+    lang: str = "en",
+    style_context: str = None,
+    character_block: str = None,
+) -> str:
+    """Use LLM to create an image prompt for children's illustrations (non-realistic).
+
+    ``style_context`` is visual-style guidance sent *into* the LLM.
+    ``character_block`` is a verbatim character-description string that is
+    appended *after* the LLM generates the scene prompt, so descriptions
+    stay identical across every chapter.
+    """
     try:
         user_content = f"Story text:\n\n{text[:2000]}"
         if style_context:
-            consistency_rules = (
-                "CHARACTER CONSISTENCY RULES:\n"
-                "- If a listed character appears in this scene, copy that character description exactly as provided.\n"
-                "- Do not change stable traits across chapters (body type, hair type/color, eye color, skin/fur/scale color, outfit type/colors).\n"
-                "- Use simple, concrete wording in the final image prompt.\n"
-                "- Do not use subjective traits (e.g., warm smile, lively look, refreshing expression).\n\n"
-            )
             user_content = (
-                f"VISUAL STYLE/CHARACTER INSTRUCTIONS:\n{style_context}\n\n"
-                f"{consistency_rules}"
+                f"VISUAL STYLE INSTRUCTIONS:\n{style_context}\n\n"
                 + user_content
             )
 
@@ -72,7 +75,11 @@ def make_image_prompt(text: str, lang: str = "en", style_context: str = None) ->
             {"role": "user", "content": user_content},
         ])
         prompt = response.content.strip() if hasattr(response, "content") else str(response).strip()
-        
+
+        # Append character descriptions verbatim so they are never rewritten
+        if character_block:
+            prompt = f"{character_block}\n\n{prompt}"
+
         logger.debug("Child-friendly prompt: %s", prompt[:200])
         return prompt
     except Exception as e:
@@ -281,29 +288,35 @@ def image_generation_node(state: StoryState):
     logger.info("Generating cover image...")
     lang = state.get("language", "en") or "en"
     cover_text = f"Book cover for: {story.title}\n\nChapters: {', '.join(c.title for c in story.chapters)}"
-    cover_style_context = image_style_context
-    if character_descriptions:
-        cover_style_context = (
-            "CHARACTER CONSISTENCY (Use only relevant characters for the cover scene):\n"
-            f"{character_descriptions}\n\n"
-        ) + image_style_context
 
-    cover_prompt = make_image_prompt(cover_text, lang=lang, style_context=cover_style_context)
+    # Build a verbatim character block for the cover (all characters)
+    cover_char_block = ""
+    if character_descriptions:
+        cover_char_block = (
+            "CHARACTER CONSISTENCY (All characters MUST match these exact descriptions):\n"
+            f"{character_descriptions}"
+        )
+
+    cover_prompt = make_image_prompt(
+        cover_text, lang=lang, style_context=image_style_context or None,
+        character_block=cover_char_block or None,
+    )
     story.cover_image_url = generate_image(cover_prompt, image_type="cover", model=model)
     logger.info("Cover image URL (Supabase): %s", story.cover_image_url)
-    
+
     # Chapter images
     logger.info(f"Generating {len(story.chapters)} chapter images...")
     for idx, chapter in enumerate(story.chapters, 1):
         logger.info(f"Chapter {idx}: {chapter.title}")
         chapter_text = f"{chapter.title}\n\n{chapter.content[:1500]}"
 
-        chapter_character_block = _build_chapter_character_block(character_descriptions or "", chapter_text)
-        chapter_style_context = f"{chapter_character_block}{image_style_context}".strip()
+        # Build verbatim character block (only characters in this chapter)
+        chapter_char_block = _build_chapter_character_block(character_descriptions or "", chapter_text)
         chapter_prompt = make_image_prompt(
             chapter_text,
             lang=lang,
-            style_context=chapter_style_context if chapter_style_context else None
+            style_context=image_style_context or None,
+            character_block=chapter_char_block or None,
         )
         chapter.image_url = generate_image(chapter_prompt, image_type="chapter", model=model)
         logger.info("Chapter %d image URL (Supabase): %s", idx, chapter.image_url)
