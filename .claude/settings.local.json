@@ -1,0 +1,11 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(wc -l /c/Users/david/Desktop/StoryBookUI/llm_evaluation/safety/safety_evals/*.json)",
+      "Bash(mkdir -p \"c:/Users/david/Desktop/StoryBookUI/llm_evaluation/safety/safety_evals/test_generator/prompts\")",
+      "Bash(mkdir -p \"c:/Users/david/Desktop/StoryBookUI/llm_evaluation/safety/safety_evals/test_generator/results\")",
+      "Bash(python -m llm_evaluation.safety.safety_evals.test_generator.generate_test_stories --type both --count 5 --model llama-3.3-70b-versatile)",
+      "Bash(python -m llm_evaluation.safety.safety_evals.test_generator.evaluate_from_file --input \"llm_evaluation/safety/safety_evals/test_generator/results/eval_stories_20260407_135726.json\")"
+    ]
+  }
+}
