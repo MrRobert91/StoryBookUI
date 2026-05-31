@@ -13,7 +13,7 @@ import pytest
 from unittest.mock import patch, MagicMock
 from api.agents.story_agent import story_generation_node
 from api.agents.utils import Story, StoryState
-from api.prompts.story_prompts import STORY_SYSTEM_PROMPT
+from api.prompts.story_prompts import get_story_system_prompt
 
 # ============================================================================
 # UNIT TESTS (MOCKED)
@@ -80,8 +80,8 @@ def test_real_story_generation_integration():
     
     try:
         logger.info("Invoking real story_agent (Groq)...")
-        # Must include 'json' in prompt for json_mode to work (STORY_SYSTEM_PROMPT has it)
-        system_msg = {"role": "system", "content": STORY_SYSTEM_PROMPT}
+        # Must include 'json' in prompt for json_mode to work.
+        system_msg = {"role": "system", "content": get_story_system_prompt()}
         user_msg = {"role": "user", "content": "Write a micro story about a cat."}
         
         response = story_agent.invoke([system_msg, user_msg])

@@ -2,10 +2,18 @@ import os
 import sys
 import pytest
 from unittest.mock import MagicMock
-from api.agents.utils import Story
 
 # Add the project root to PYTHONPATH so we can import 'api'
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
+
+os.environ.setdefault("OPENAI_API_KEY", "sk-fake-openai-key")
+os.environ.setdefault("GROQ_API_KEY", "gsk_fake_groq_key")
+os.environ.setdefault("SUPABASE_URL", "https://fake.supabase.co")
+os.environ.setdefault("SUPABASE_SERVICE_ROLE_KEY", "fake-key")
+os.environ.setdefault("SUPABASE_ANON_KEY", "fake-anon-key")
+os.environ.setdefault("SUPABASE_PROJECT_REF", "fake-project")
+
+from api.agents.utils import Story
 
 @pytest.fixture(autouse=True)
 def mock_env_vars(monkeypatch):
