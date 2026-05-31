@@ -1,6 +1,6 @@
 # Construí una IA que genera cuentos personalizados para niños — y quiero que la pruebes
 
-*Un proyecto personal que acabó siendo algo que de verdad quiero que pruebes*
+*De una idea suelta a un cuento ilustrado y personalizado: pruébalo y cuentame que te parece*
 
 ---
 
