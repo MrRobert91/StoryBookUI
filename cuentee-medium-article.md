@@ -1,6 +1,6 @@
 # Construí una IA que genera cuentos personalizados para niños — y quiero que la pruebes
 
-*Un proyecto de fin de semana que se fue de las manos (de la mejor manera posible)*
+*Un proyecto personal que acabó siendo algo que de verdad quiero que pruebes*
 
 ---
 
@@ -8,19 +8,24 @@ Hay una idea que tengo dando vueltas en la cabeza desde hace tiempo: ¿y si pudi
 
 Eso es **[Cuentee](https://www.cuentee.com)**.
 
+*(Si prefieres curiosear antes de leer: está en [www.cuentee.com](https://www.cuentee.com).)*
+
 Lo construí en mi tiempo libre, con muchas ganas y bastante café. No es un producto de una startup respaldada por millones, es algo que hice yo solo porque quería ver si era posible. Te cuento qué puede hacer, cómo funciona, y si tienes hijos, sobrinos o simplemente curiosidad, te invito a que lo pruebes y me digas qué piensas.
 
 ---
 
 ## ¿Qué es Cuentee?
 
-Cuentee genera cuentos infantiles con IA, con texto e ilustraciones. Describes lo que quieres y en un par de minutos tienes un cuento original de varios capítulos con imágenes generadas para cada escena.
+Cuentee genera cuentos infantiles con IA, con texto e ilustraciones. Describes lo que quieres y normalmente en uno o dos minutos tienes un cuento original de varios capítulos con imágenes generadas para cada escena. Cada cuento que creas se guarda en tu cuenta, así que no se pierde: tienes una galería donde puedes volver a leerlos o descargarlos cuando quieras.
 
-Hay dos formas de usarlo. El **modo libre** es exactamente lo que parece: escribes (o dictás por voz) lo que se te ocurra. El **modo guiado** está pensado para cuentos educativos: eliges el grupo de edad, describes al protagonista, seleccionas un tema científico (el espacio, el ciclo del agua, las emociones, los animales...) y una misión concreta. El resultado es una historia que tiene trama y que además explica algo.
+![Un cuento generado en Cuentee: portada y un par de páginas con sus ilustraciones](docs/screenshots/story-viewer.png)
+*Un cuento real generado con Cuentee. (Sustituye esta imagen por una captura o GIF de un cuento tuyo — es lo que más anima a probarlo.)*
 
-Lo que sí me costó resolver fue la coherencia visual entre capítulos. Cuando generas ilustraciones con IA una a una, el personaje cambia de aspecto en cada imagen. Sofía puede tener el pelo rojo en el capítulo 1 y rubio en el capítulo 3. Para evitarlo, el sistema extrae una descripción visual precisa de cada personaje después de generar el texto ("niña humana, 8 años, pelo largo y rizado de color rojo intenso, ojos verdes, piel clara, peto vaquero azul...") y la inyecta literalmente en cada prompt de imagen, sin que ningún modelo la reescriba ni la interprete. No es un truco especialmente elegante, pero funciona.
+Hay dos formas de usarlo. El **modo libre** es exactamente lo que parece: escribes (o dictas por voz) lo que se te ocurra. El **modo guiado** está pensado para cuentos educativos: eliges el grupo de edad, describes al protagonista, seleccionas un tema científico (el espacio, el ciclo del agua, las emociones, los animales...) y una misión concreta. El resultado es una historia que tiene trama y que además explica algo.
 
-En cuanto a estilos, puedes elegir entre dibujos animados, acuarela, animación 3D, anime, crayones de niño e ilustración editorial. Y los cuentos se pueden generar en seis idiomas: español, inglés, francés, alemán, italiano y portugués. No cambia solo el texto, las instrucciones del sistema y los temas educativos están localizados en cada idioma. Una cosa más: el PDF exportable usa la fuente OpenDyslexic, diseñada para lectores con dislexia. Es un detalle pequeño, pero me importa.
+Lo que sí me costó resolver fue la coherencia visual entre capítulos. Cuando generas ilustraciones con IA una a una, el personaje cambia de aspecto en cada imagen. Sofía puede tener el pelo rojo en el capítulo 1 y rubio en el capítulo 3. Para evitarlo, el sistema extrae una descripción visual precisa de cada personaje después de generar el texto ("niña humana, 8 años, pelo largo y rizado de color rojo intenso, ojos verdes, piel clara, peto vaquero azul...") y la inyecta literalmente en cada ilustración, sin que ningún modelo la reescriba ni la interprete. No es un truco especialmente elegante, pero funciona: la niña se parece a sí misma de la primera página a la última.
+
+En cuanto a estilos, puedes elegir entre dibujos animados, acuarela, animación 3D, anime, crayones de niño e ilustración editorial. Y los cuentos se pueden generar en seis idiomas: español, inglés, francés, alemán, italiano y portugués. No cambia solo el texto, también los temas y las instrucciones internas están adaptados a cada idioma. Una cosa más: el PDF que puedes descargar usa la fuente OpenDyslexic, diseñada para lectores con dislexia. Es un detalle pequeño, pero me importa.
 
 ---
 
@@ -38,54 +43,50 @@ El resultado son entre 3 y 10 capítulos, con portada e ilustración propia para
 
 ---
 
-## Cómo funciona por dentro
+## Cómo funciona (sin entrar en la fontanería)
 
-El backend está en Python con FastAPI, y las generaciones se procesan de forma asíncrona con Celery y Redis. Generar un cuento con ilustraciones puede tardar entre 30 segundos y un par de minutos, así que no puedes tener al usuario mirando una pantalla bloqueada. El frontend es Next.js con TypeScript y TailwindCSS. Para persistencia, autenticación y almacenamiento de imágenes uso Supabase, que me ahorró bastante trabajo en infraestructura.
+No quiero aburrirte con la arquitectura, pero sí contarte la idea, porque explica por qué los cuentos salen como salen.
 
-La generación de cada cuento pasa por tres fases encadenadas con LangGraph. Primero, un LLM escribe la historia completa en formato estructurado: título más capítulos. Luego, el mismo modelo lee el texto recién generado y extrae una descripción visual objetiva de cada personaje, sin adjetivos subjetivos, solo atributos observables: especie, edad, color de pelo, color de ojos, ropa. Por último, para cada capítulo se construye un prompt de escena con los bloques de personajes añadidos literalmente, y ese prompt va a la API de imágenes de OpenAI.
+Cada cuento se construye en tres pasos. Primero, un modelo de IA escribe la historia completa, capítulo a capítulo. Después, otro paso vuelve a leer esa historia y "ficha" a cada personaje con una descripción visual muy concreta, sin florituras: especie, edad, color de pelo, color de ojos, ropa. Y por último, esa ficha se usa tal cual para generar cada ilustración. Ese segundo paso es el que mantiene a los personajes coherentes de principio a fin, y es la parte que más me costó afinar.
 
-También hay un sistema de revisión de seguridad infantil: un LLM independiente evalúa cada historia según criterios de idoneidad (violencia, contenido adulto, elementos perturbadores). Si el porcentaje de historias que superan el umbral cae demasiado, el sistema avisa. No es infalible, pero es mejor que no tener nada.
+También hay una revisión de seguridad infantil: antes de dar nada por bueno, otro modelo evalúa los cuentos buscando cosas que no deberían estar ahí (violencia, contenido adulto, elementos perturbadores). No es infalible, pero prefiero tener una red que no tenerla.
 
----
-
-## Las herramientas que me ayudaron
-
-Cuentee lo construí yo, pero con una cantidad absurda de ayuda de IAs de código.
-
-El que más usé fue **Claude Code**, sobre todo cuando necesitaba razonar sobre la arquitectura. No solo completa líneas, entiende el proyecto entero y puedes preguntarle cosas como "¿tiene sentido modelarlo así o me estoy complicando?". Útil de verdad.
-
-Para arrancar rápido y generar boilerplate en las fases iniciales usé **OpenAI Codex**. **GitHub Copilot** dentro de VS Code fue el compañero del día a día, para lo más mecánico. Y **Jules de Google** lo probé para tareas más autónomas, del tipo "trabaja en esta rama y refactoriza este módulo". Funciona de forma asíncrona, lo dejas trabajar y vuelves después.
-
-La sensación general es que ya no estás solo en el proyecto, aunque seas el único que lo trabaja.
+Por debajo hay bastante más fontanería —generación de texto, ilustraciones, PDFs, todo orquestado para que no esperes mirando una pantalla bloqueada—, pero eso es tema para otro artículo más técnico.
 
 ---
 
 ## El modelo (de momento, gratuito)
 
-Cuentee funciona con un sistema de créditos: cada cuento generado cuesta uno. Ahora mismo el plan gratuito da 3 créditos para empezar y no hay ningún plan de pago. Quiero primero ver si esto le resulta útil a alguien antes de complicarlo. Los costes de API de OpenAI y Groq son reales, pero de momento los asumo yo.
+Cuentee funciona con un sistema de créditos: cada cuento generado cuesta uno. Ahora mismo el plan gratuito da 3 créditos para empezar y no hay ningún plan de pago. Quiero primero ver si esto le resulta útil a alguien antes de complicarlo. Los costes de las APIs de IA son reales, pero de momento los asumo yo.
 
 ---
 
-## Qué viene después
+## Dónde está ahora
 
-Tengo más ideas que tiempo, así que en algún momento tendré que decidir qué tiene sentido construir. Las que más me rondan:
+Para que sepas qué esperar: Cuentee funciona y es gratis (esos 3 créditos para empezar, sin plan de pago). Es un proyecto en activo de una sola persona, así que verás cosas por pulir y algún detalle áspero. Si algo no funciona como esperabas, quiero saberlo: es justo el tipo de feedback que necesito ahora mismo.
+
+---
+
+## Qué viene después (y dónde entras tú)
+
+Tengo más ideas que tiempo, así que tendré que decidir qué construir primero. Estas son las que más me rondan:
 
 - narración en audio, para escuchar el cuento como un audiolibro
 - personajes persistentes que puedas reutilizar en varios cuentos
 - un modo donde el niño elige qué pasa en cada capítulo
 - impresión física, para que el cuento acabe siendo un libro de verdad
 
-Pero antes de construir cualquiera de esas cosas, me interesa saber si lo que hay ahora es útil para alguien.
+Pero no quiero decidirlo yo solo. ¿Cuál de estas te interesa más? ¿Hay algo que no está en la lista y que para ti sería lo primero? Dímelo, porque antes de construir nada nuevo me interesa saber si lo que ya hay le sirve a alguien.
 
 ---
 
-## Una última cosa
+## Pruébalo y cuéntame
 
 Si tienes hijos, sobrinos, alumnos, o simplemente quieres ver qué pasa cuando le pides a una IA la historia de un cocodrilo filósofo en estilo acuarela, pruébalo:
 
 **[www.cuentee.com](https://www.cuentee.com)**
 
-Cualquier comentario es bienvenido, aquí en Medium, por email, por LinkedIn. Me interesa especialmente saber si el cuento tiene calidad, si las ilustraciones encajan con lo que esperabas, o si hay algo que claramente falta. Las críticas también sirven, quizá más que los aplausos.
+**¿Tienes alguna duda sobre cómo funciona? ¿Hay una funcionalidad que te gustaría ver** —narración en audio, más idiomas, impresión física, lo que sea—**? Déjala en los comentarios.** Leo todo y me ayuda a decidir qué construir después. Y si pruebas a generar un cuento, cuéntame qué tal: si la historia tiene calidad, si las ilustraciones encajaban con lo que esperabas, o si hay algo que claramente falta. Las críticas valen, quizá más que los aplausos.
 
 ---
 

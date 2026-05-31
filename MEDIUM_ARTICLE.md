@@ -1,586 +1,257 @@
-# Cómo funciona Cuentee por dentro: arquitectura de una plataforma de cuentos infantiles con IA
+# Más allá del prompt: cómo construí Cuentee, un generador de cuentos infantiles con IA
 
-Cuentee es una aplicación full stack para generar cuentos infantiles personalizados con texto, ilustraciones, PDF final y persistencia en la nube. En esta rama, el sistema está construido sobre una separación bastante clara entre frontend, API, procesamiento asíncrono y almacenamiento, con Supabase como pieza transversal para autenticación, base de datos y ficheros.
+La primera versión de Cuentee fue un script de cuarenta líneas. Le pasabas una idea, llamaba a un LLM, y te escupía un cuento. Funcionaba. Y precisamente porque funcionaba tan rápido, tardé un par de días en darme cuenta de que no tenía nada.
 
-La idea de producto es simple: un usuario autenticado describe una historia o completa un formulario guiado, el backend orquesta la generación con LLMs e imágenes, el resultado se guarda, se convierte a PDF y vuelve al frontend cuando el trabajo asíncrono termina. Lo interesante está en cómo se encadenan esas piezas.
+Generar texto con un modelo es la parte fácil. Es casi un commodity. El problema real aparece cuando intentas convertir esa llamada en algo que una familia pueda usar: un cuento con ilustraciones coherentes, seguro para un niño, que se pueda descargar, que no haga esperar al usuario diez minutos mirando un spinner, y que no te arruine en costes de API. Ahí es donde "haz una app con IA" se convierte en "diseña un sistema".
 
-## 1. Vista general de la arquitectura
+Este artículo es sobre ese salto. Qué decisiones aparecen cuando intentas que un generador de cuentos con IA sea coherente, seguro, monetizable y agradable de usar. No es un tutorial de instalación. Es la historia de las partes que costaron de verdad.
 
-El repositorio se divide en cuatro bloques principales:
+---
 
-- `frontend/`: aplicación Next.js 15 con App Router.
-- `api/`: backend FastAPI con endpoints HTTP y WebSocket.
-- `api/celery_tasks/`: workers de Celery para trabajos largos.
-- `db/`: esquema SQL para Supabase/Postgres.
+## El problema que parecía sencillo
 
-El flujo principal es este:
+"Genera un cuento infantil." Suena trivial. Pero si lo desmenuzas, cada palabra esconde un reto:
 
-1. El usuario entra en la UI y se autentica con Supabase.
-2. El frontend envía una petición al backend FastAPI con el JWT del usuario.
-3. FastAPI valida identidad y créditos.
-4. La API encola un trabajo en Celery.
-5. El worker ejecuta un grafo de LangGraph:
-   - genera la historia estructurada con Groq,
-   - genera portada e ilustraciones con OpenAI,
-   - sube imágenes a Supabase Storage.
-6. Tras la generación, el worker:
-   - compone un PDF,
-   - lo sube a otro bucket de Supabase,
-   - guarda la historia en la tabla `stories`,
-   - descuenta un crédito del usuario.
-7. Mientras tanto, el frontend hace polling del estado de la tarea hasta recibir el resultado final.
+- **Personalización**: que el cuento sea sobre *este* niño, su nombre, su animal favorito, lo que le gusta del cole.
+- **Coherencia narrativa**: una historia con principio, nudo y desenlace, no un texto que se deshilacha.
+- **Tono adecuado**: lenguaje apropiado para la edad, sin caer en lo soso ni en lo inquietante.
+- **Seguridad del contenido**: nada de violencia, miedo gratuito o temas adultos. Esto no es negociable cuando el lector tiene seis años.
+- **Ilustraciones coherentes**: y aquí está el monstruo escondido, del que hablaré en detalle más abajo.
+- **Coste**: cada cuento son varias llamadas a modelos de texto e imagen. Multiplica eso por usuarios reales.
+- **Experiencia**: que generar un cuento sea un par de clics, no rellenar un formulario de Hacienda.
 
-## 2. Frontend: Next.js como capa de experiencia
+Ninguno de estos problemas se resuelve con un prompt más largo.
 
-La aplicación web usa Next.js 15 con React 19 y App Router. No es un frontend “thin client”: además de renderizar páginas, controla sesión, estado de generación, internacionalización y algunas capacidades interactivas como entrada por voz.
+---
 
-### Layout y providers globales
+## Qué es Cuentee
 
-En `frontend/app/layout.tsx` el árbol de la app se envuelve con dos providers:
+Cuentee es una aplicación web que genera cuentos infantiles personalizados con IA: texto e ilustraciones, listos para leer en pantalla o descargar en PDF. El usuario describe lo que quiere, y en uno o dos minutos tiene una historia original de varios capítulos, cada uno con su propia ilustración.
 
-- `AuthProvider`: hidrata la sesión de Supabase en cliente.
-- `LanguageProvider`: resuelve traducciones desde JSON locales.
+Hay dos formas de usarlo, y la diferencia entre ambas es más interesante de lo que parece:
 
-Eso hace que toda la UI pueda consultar:
+- **Modo libre**: escribes (o dictas por voz) lo que se te ocurra. *"Un cocodrilo que se jubila del Nilo y se va a Florencia a aprender acuarela."*
+- **Modo guiado**: pensado para cuentos educativos. Eliges grupo de edad, describes al protagonista, seleccionas un tema científico (el ciclo del agua, el espacio, las emociones) y una misión concreta. El resultado tiene trama *y además* enseña algo.
 
-- el usuario autenticado,
-- el token de sesión,
-- el idioma actual.
+Lo curioso es que, por dentro, **no son dos sistemas distintos**. Es el mismo motor de generación con dos capas diferentes de preparación del contexto. El modo guiado no es más que un constructor de prompts más estructurado delante del mismo pipeline. Volveré a esto, porque es una de las decisiones de las que más me alegro.
 
-### Navegación del producto
+---
 
-La página principal (`frontend/app/page.tsx`) vende el producto como plataforma de creación de cuentos. La ruta `frontend/app/make-tale/page.tsx` actúa como selector de modo y obliga a estar autenticado antes de continuar.
+## El recorrido de un cuento
 
-Desde ahí hay dos experiencias:
+Antes de entrar en arquitectura, el flujo desde fuera:
 
-- `open`: el usuario escribe un prompt libre.
-- `guided`: el usuario rellena un formulario guiado con edad, protagonista, tema científico, misión y estilo visual.
-
-Este detalle es importante porque en backend no existen dos sistemas completamente distintos. Lo que cambia es la forma de construir el prompt de entrada.
-
-## 3. Autenticación y sesión con Supabase
-
-El frontend usa `@supabase/ssr` para crear el cliente browser-side. La sesión se obtiene en cliente mediante `supabase.auth.getSession()` y el `access_token` se reenvía al backend en la cabecera:
-
-```http
-Authorization: Bearer <jwt>
+```text
+1. El usuario inicia sesión.
+2. Usa uno de sus créditos.
+3. Describe el cuento (modo libre o guiado).
+4. El sistema escribe la historia estructurada.
+5. Extrae a los personajes y fija su aspecto.
+6. Genera la portada y una ilustración por capítulo.
+7. Compone un PDF y lo guarda en la nube.
+8. El usuario lo lee o lo descarga.
 ```
 
-En el backend, FastAPI extrae ese JWT en `api/core/dependencies.py` y delega la validación en `api/services/user_service.py`.
+Visto así, parece una línea recta. La gracia está en que casi nada de eso ocurre dentro de la petición HTTP del usuario.
 
-La verificación sigue este patrón:
+---
 
-1. Se crea un cliente Supabase “de usuario” con la anon key.
-2. Se aplica el JWT al cliente PostgREST.
-3. Se llama a `supabase.auth.get_user(token)`.
-4. Se consulta la tabla `profiles` para obtener `credits` y `plan`.
+## La arquitectura, sin que pese
 
-De ahí sale el objeto `UserProfile`, que es la pieza con la que FastAPI ya trabaja en los endpoints protegidos.
+El sistema tiene cuatro piezas, y cada una hace una sola cosa:
 
-En otras palabras, el backend no confía en datos enviados por el frontend sobre plan o créditos: siempre reconsulta Supabase.
+```text
+Usuario (Next.js)
+   │  POST con el JWT de Supabase
+   ▼
+FastAPI  ──► valida identidad y créditos, encola la tarea y responde al instante
+   │
+   ▼
+Celery + Redis  ──► el trabajo pesado, fuera del ciclo de la petición
+   │
+   ▼
+Grafo LangGraph  ──► historia → personajes → imágenes
+   │
+   ▼
+Supabase  ──► Postgres (datos) + Storage (imágenes y PDFs) + Auth
+```
 
-## 4. El modelo de datos: historias, perfiles y RLS
+El **frontend** es Next.js 15 con React 19. No es un cliente tonto: gobierna sesión, internacionalización, el estado de la generación e incluso la entrada por voz.
 
-El esquema en `db/schema.sql` define dos tablas principales:
-
-- `stories`
-- `profiles`
-
-### Tabla `profiles`
-
-Guarda:
-
-- `id`
-- `credits`
-- `plan`
-- `plus_since`
-- `last_credited_at`
-
-Además hay un trigger `handle_new_user()` que crea automáticamente el perfil cuando entra un nuevo usuario en `auth.users`.
-
-### Tabla `stories`
-
-Guarda:
-
-- `user_id`
-- `title`
-- `content`
-- `prompt`
-- `story_type`
-- `metadata`
-- timestamps
-
-La decisión relevante aquí es que `content` se almacena como texto, pero en la práctica contiene JSON serializado con la historia completa: título, portada, capítulos, imágenes y metadatos. Es una solución pragmática para prototipado rápido porque evita normalizar capítulos e imágenes en tablas separadas.
-
-### Seguridad con RLS
-
-Las políticas de Row Level Security limitan acceso a los propios datos del usuario:
-
-- cada usuario puede leer sus historias,
-- insertar las suyas,
-- actualizarlas,
-- borrarlas.
-
-Eso convierte a Supabase en algo más que una base de datos: es también la frontera de seguridad de la aplicación.
-
-## 5. La entrada al backend: FastAPI como fachada síncrona de un sistema asíncrono
-
-El backend expone tres grupos de rutas:
-
-- `/stories`
-- `/tasks`
-- `/transcription`
-
-### Generación de historias
-
-Los endpoints más importantes están en `api/routers/stories.py`:
-
-- `POST /stories/generate-story-async`
-- `POST /stories/generate_guided_story_async`
-
-Ambos hacen lo mismo a alto nivel:
-
-1. validan autenticación y créditos,
-2. transforman la entrada en un prompt,
-3. llaman a `generate_story_task.delay(...)`,
-4. devuelven `task_id`.
-
-La respuesta inmediata no contiene la historia. Solo devuelve algo como:
+El **backend** es FastAPI, y su trabajo principal es decir que no. Valida el JWT contra Supabase, comprueba créditos, y —esto es importante— **nunca confía en lo que el frontend le cuenta sobre el plan o el saldo del usuario**: siempre reconsulta la base de datos. Si todo cuadra, encola una tarea en Celery y devuelve un `task_id` de inmediato. No genera nada él mismo.
 
 ```json
-{
-  "task_id": "abc123",
-  "status": "processing"
+{ "task_id": "abc123", "status": "processing" }
+```
+
+Esa respuesta vacía es deliberada. Generar texto, varias imágenes, un PDF y escribir en base de datos puede tardar minuto y medio. Mantener una conexión HTTP abierta todo ese tiempo es frágil y no escala. Así que el backend acepta el encargo y se desentiende; **Celery** y un broker de **Redis** se encargan del resto en segundo plano. El frontend, mientras tanto, hace *polling* cada dos segundos contra `GET /tasks/{id}` hasta que el estado pasa a `completed`.
+
+¿Es elegante el polling? No. ¿Es simple y suficiente para esta fase? Sí. Y esa es exactamente la clase de trade-off del que va este proyecto.
+
+**Supabase** es el pegamento de todo: autenticación, base de datos Postgres y almacenamiento de objetos, las tres cosas detrás de una sola plataforma. Con Row Level Security activado, la propia base de datos es la frontera de seguridad: cada usuario solo puede ver sus historias, sin que yo tenga que escribir esa lógica en el backend. Para un proyecto de una sola persona, reducir el número de piezas operativas no es comodidad, es supervivencia.
+
+---
+
+## La parte difícil no era llamar a la API
+
+Aquí es donde el proyecto se puso interesante.
+
+Cuando generas ilustraciones con IA una a una, **los personajes mutan**. Sofía tiene el pelo rojo y un peto vaquero en el capítulo 1; en el capítulo 3 es rubia y lleva vestido. El modelo de imagen no tiene memoria entre llamadas: cada ilustración es un universo nuevo. Para un cuento, eso lo rompe todo. Un niño nota al instante que "esa no es la misma niña".
+
+Mi primer instinto fue el obvio: pasar la descripción del personaje por el LLM en cada capítulo para que "adaptara" el prompt a la escena. Fue un error. El modelo, por su naturaleza, reescribe. "Pelo rojo intenso" se convierte en "pelo pelirrojo", luego en "tonos cobrizos", y dos capítulos después el personaje ha derivado. Cada reformulación introduce ruido, y el ruido acumulado es justo el problema que intentaba resolver.
+
+La solución a la que llegué es casi anticlimática de lo simple que es: **el aspecto de un personaje nunca debe pasar por un LLM más de una vez.**
+
+Esto convirtió el grafo de generación de dos nodos en tres:
+
+```text
+START → generar_historia → extraer_personajes → generar_imágenes → END
+```
+
+El nodo del medio es el truco. Después de escribir la historia, un segundo paso lee el texto completo y extrae una *ficha visual objetiva* de cada personaje, con un formato rígido y deliberadamente antipoético:
+
+```text
+You are a visual character specification extractor for children's book illustration.
+Output EXACTLY one bullet line per character with this format:
+- [Name]: [species/type], [apparent age], [hair/fur style and color],
+  [eye color], [skin color], [clothing items and colors],
+  [distinctive markers], [body build]
+
+Rules:
+- Use only observable, concrete attributes.
+- Avoid subjective wording (e.g. "warm smile", "lively look").
+- Colors must be explicit (dark brown, light blue), not vague (colorful, pastel).
+```
+
+El resultado es una línea por personaje, fea a propósito:
+
+```text
+- Luna: human girl, 8 years old, long curly red hair, green eyes, fair skin,
+  blue denim overalls with a yellow star patch, freckles, slim build
+```
+
+Y entonces viene la regla de oro. Cuando se genera la ilustración de un capítulo, el LLM escribe la *escena*, pero la ficha del personaje se **pega tal cual, byte a byte, sin que el modelo la toque**:
+
+```python
+# El LLM genera la descripción de la escena...
+response = image_llm.invoke([...])
+prompt = response.content.strip()
+
+# ...y el bloque de personajes se antepone VERBATIM, nunca reescrito.
+if character_block:
+    prompt = f"{character_block}\n\n{prompt}"
+```
+
+Esos bytes son idénticos en el capítulo 1, en el 5 y en la portada. Luna es exactamente la misma Luna en todas las imágenes porque la cadena de texto que la describe literalmente no cambia.
+
+Hay un último detalle que me gustó resolver: a cada capítulo solo se le inyectan los personajes que **realmente aparecen en él**, detectados buscando sus nombres (y variantes) en el texto del capítulo. Así, el modelo de imagen no se distrae dibujando en la escena a un personaje que no pinta nada ahí.
+
+No es una técnica sofisticada. No usa embeddings, ni fine-tuning, ni nada que quede bien en un paper. Es una decisión de ingeniería pragmática: *identifica qué información no puede degradarse y blíndala de la no-determinación del modelo.* Esa idea —saber qué partes del sistema deben ser deterministas y cuáles pueden ser creativas— es probablemente lo más transferible que me llevo de todo el proyecto.
+
+---
+
+## Un contrato, no un texto
+
+Otra decisión temprana que pagó dividendos: la historia nunca viaja como texto libre. El modelo de Groq (LLaMA 3.3 70B) está configurado para devolver directamente un objeto validado por Pydantic.
+
+```python
+story_agent = story_llm.with_structured_output(Story, method="json_mode")
+```
+
+`Story` es un contrato: título, lista de capítulos, URLs de imagen, tipo, metadatos. Si el modelo se sale del esquema, falla ruidosamente en el sitio correcto, en lugar de colarse como un JSON malformado que reventará tres pasos más adelante, en el generador de PDF, donde es imposible de depurar. En sistemas generativos, donde la salida es inherentemente impredecible, tener un contrato fuerte en el borde no es burocracia: es lo que evita que el caos se propague.
+
+Por cierto, el texto y los prompts de imagen los genera Groq; las imágenes en sí, OpenAI (DALL·E 3 / GPT-Image). Mezclar proveedores por especialidad —Groq por latencia y coste en texto, OpenAI por calidad de imagen— es de las pocas decisiones que tomé sin dudar. Y una vez generada, cada imagen se sube a mi propio Supabase Storage en lugar de servirla desde la URL efímera del proveedor. Si generas activos, necesitas una estrategia de activos; depender de un enlace temporal de OpenAI es pedir que tus cuentos se queden sin ilustraciones en 24 horas.
+
+---
+
+## Dos experiencias, un solo motor
+
+Vuelvo a la promesa de antes. El modo libre y el modo guiado comparten *exactamente* el mismo grafo, la misma tarea de Celery, el mismo postproceso. Lo único que cambia es cómo se construye el prompt antes de entrar al pipeline.
+
+Esto fue una decisión consciente y, en retrospectiva, la correcta. Significó que cada mejora en el motor —la consistencia de personajes, la trazabilidad, los reintentos— beneficiaba a las dos experiencias sin escribir nada dos veces. La lección de producto es contraintuitiva: a veces la mejor UX no es "escribe lo que quieras". Un formulario bien diseñado (edad, protagonista, tema, misión) produce mejores cuentos y reduce la ambigüedad que el modelo tendría que adivinar. La libertad total es una gran demo y un mal default.
+
+---
+
+## Seguridad infantil como ciudadano de primera
+
+Un cuento generado por IA para un niño tiene un fallo de seguridad inaceptable por defecto: a veces se sale del carril. Por eso Cuentee tiene un evaluador de seguridad como *LLM-as-a-judge*. Un modelo independiente puntúa cada historia en una escala de 0 a 3 y la clasifica como apta o no apta, marcando categorías como violencia, contenido adulto o elementos inquietantes.
+
+Lo monté como un flujo offline que puede correr en CI: genera un lote de cuentos directamente por el grafo (sin Celery, sin API, sin coste de imágenes) y los puntúa. La puerta de calidad es explícita: **al menos el 90% de los cuentos deben sacar un 2 o más**, o el script sale con código de error. No es infalible —ningún filtro lo es—, pero convierte "creo que es seguro" en un número que puedo vigilar y que rompe el build si empeora.
+
+---
+
+## Trazabilidad: porque "falló algo" no sirve
+
+En cuanto hay usuarios reales, seis idiomas, varios modelos y créditos de por medio, "ha fallado la generación" es inútil como diagnóstico. Necesitas saber *con qué prompt, qué configuración, qué usuario, qué idioma y qué modelo*.
+
+Cada generación se instrumenta con LangSmith y arrastra metadatos ricos:
+
+```python
+run_metadata = {
+    "agent_name": "story_agent",
+    "story_type": story_type,
+    "topic": topic,
+    "user_id": user_id,
+    "language": metadata.get("language", "en"),
+    "model": model or "llama-3.3-70b-versatile",
+    "story_id": str(task_id),
 }
 ```
 
-Esto evita mantener la conexión abierta durante generación de texto, imágenes, PDF y escritura en base de datos.
+Cada cuento se vuelve una unidad observable. Cuando algo sale raro, no adivino: lo miro. La trazabilidad deja de ser un lujo y pasa a ser obligatoria mucho antes de lo que uno espera.
 
-### Consulta de estado
+---
 
-El endpoint `GET /tasks/{task_id}` envuelve `AsyncResult(task_id)` de Celery y traduce el estado a una respuesta simple para el frontend.
+## El final del viaje: PDF, persistencia y créditos
 
-Este diseño separa correctamente:
+Cuando las imágenes están listas, el worker entra en el postproceso, donde ocurren tres cosas, en orden:
 
-- la aceptación rápida del trabajo,
-- de la recuperación posterior del resultado.
+1. **PDF**: con `fpdf` y `Pillow` se compone un documento de verdad —portada, marcos, imágenes redondeadas, y la fuente *OpenDyslexic*, pensada para lectores con dislexia. Es un detalle pequeño que para mí importa. No es un volcado de texto plano; es un artefacto presentable.
+2. **Persistencia**: se guarda la historia en Postgres. Aquí hice una concesión pragmática: el cuento entero se almacena como JSON serializado en una columna de texto, en lugar de normalizar capítulos e imágenes en tablas aparte. Acelera el desarrollo a costa de complicar las analíticas futuras. Lo sé, y lo asumo conscientemente.
+3. **Créditos**: se descuenta uno del perfil del usuario. Y si la tarea falla, Celery reintenta hasta tres veces con un minuto de espera, así un fallo transitorio de un proveedor no le cuesta el cuento al usuario.
 
-## 6. El hook del frontend que gobierna el flujo asíncrono
-
-En `frontend/hooks/use-story-generation.ts` está una de las piezas más importantes del frontend.
-
-Ese hook:
-
-1. lanza la petición inicial de generación,
-2. recibe el `task_id`,
-3. hace polling cada 2 segundos contra `/tasks/{task_id}`,
-4. actualiza el estado local:
-   - `queued`
-   - `processing`
-   - `completed`
-   - `failed`
-
-La lógica es simple, pero efectiva para un prototipo productivo. No introduce WebSockets para el resultado del cuento, lo que reduce complejidad en frontend y backend.
-
-El precio es conocido:
-
-- más tráfico por polling,
-- menor inmediatez que un canal push,
-- y necesidad de límites de timeout.
-
-En este caso, el hook corta a los 300 polls, es decir, unos 10 minutos.
-
-## 7. Dos experiencias de creación, un mismo pipeline
-
-### Modo abierto
-
-En `frontend/components/tale-generator.tsx`, el usuario:
-
-- escribe un prompt,
-- elige longitud,
-- elige estilo visual,
-- opcionalmente dicta texto por micrófono.
-
-Después el frontend envía un payload con:
-
-- `topic`
-- `num_chapters`
-- `visual_style`
-- `lang`
-
-### Modo guiado
-
-En `frontend/components/guided-tale-generator.tsx`, el usuario no redacta libremente. Selecciona:
-
-- grupo de edad,
-- nombre y descripción del protagonista,
-- tema científico,
-- misión,
-- estilo visual,
-- número de capítulos.
-
-El backend convierte esos campos estructurados en un prompt rico usando `api/prompts/guided_story_prompts.py`.
-
-La conclusión técnica es interesante: Cuentee no tiene dos motores narrativos distintos. Tiene un mismo motor generativo con dos capas distintas de preparación de contexto.
-
-## 8. Ingeniería de prompts e internacionalización
-
-La parte de prompts está bastante modularizada:
-
-- `api/prompts/utils.py`
-- `api/prompts/story_prompts.py`
-- `api/prompts/guided_story_prompts.py`
-- `api/prompts/translations/*.py`
-
-### Localización de prompts
-
-`get_localized_prompts(lang)` carga módulos por idioma y devuelve varios bloques:
-
-- prompts de estilo visual,
-- prompts de temas,
-- prompts de misiones,
-- prompt de sistema,
-- formato guiado.
-
-Eso permite que no solo cambie el idioma de la interfaz, sino también la instrucción real que recibe el modelo.
-
-### Prompt de historia
-
-`get_story_system_prompt()` construye el system prompt final con:
-
-- número de capítulos,
-- pautas de longitud por capítulo.
-
-### Prompt de imagen
-
-`get_image_prompt_system()` entrega el prompt base para que otro LLM transforme fragmentos narrativos en prompts visuales aptos para ilustración infantil.
-
-Esta separación es buena práctica. El modelo que escribe la historia no es exactamente el mismo que “traduce” historia a prompt visual.
-
-## 9. LangGraph como núcleo de orquestación
-
-La lógica central vive en `api/agents/story_agent.py`.
-
-Aquí el proyecto define:
-
-- un modelo estructurado `Story`,
-- un estado tipado `StoryState`,
-- un `StateGraph`,
-- dos nodos:
-  - `generate_story`
-  - `generate_images`
-
-### Nodo 1: generación de texto
-
-`story_generation_node()`:
-
-1. toma `messages`, idioma y número de capítulos,
-2. construye el system prompt,
-3. llama a `story_agent.invoke(...)`.
-
-El `story_agent` es un `ChatGroq` configurado con `with_structured_output(Story, method="json_mode")`. Eso significa que el LLM no devuelve texto arbitrario, sino una estructura validada por Pydantic.
-
-Este punto es clave:
-
-- título,
-- capítulos,
-- URLs de imagen,
-- tipo de historia,
-- metadatos
-
-quedan encapsulados en un contrato fuerte. Para aplicaciones generativas, eso reduce mucho el coste de postprocesado y parsing frágil.
-
-### Nodo 2: generación de imágenes
-
-`image_generation_node()` recibe la historia ya estructurada y hace:
-
-1. prepara contexto de usuario para almacenamiento,
-2. genera prompt de portada,
-3. genera imagen de portada,
-4. recorre capítulos,
-5. genera prompt por capítulo,
-6. genera una imagen por capítulo.
-
-Después compone un `final_output` serializable que ya incluye `story_id`, `user_id`, `story_type` y `metadata`.
-
-### El grafo
-
-El grafo es lineal:
-
-```text
-START -> generate_story -> generate_images -> END
+```python
+except Exception as e:
+    raise self.retry(exc=e, countdown=60, max_retries=3)
 ```
 
-No es un workflow complejo con ramas o reintentos por nodo, pero sí introduce una ventaja importante: deja preparada la base para evolucionar el pipeline sin convertir el código en una cascada de llamadas difícil de mantener.
+---
 
-## 10. Texto con Groq, imágenes con OpenAI
+## Lo que cambiaría en la siguiente versión
 
-Cuentee mezcla proveedores por especialidad.
+Ningún sistema honesto está terminado. Estos son los cuellos de botella que ya veo:
 
-### Generación de texto
+- **Polling → push**. Funciona, pero a más tráfico, mover el resultado a SSE o WebSocket reduciría la latencia percibida y el tráfico inútil.
+- **El `content` semiestructurado**. El JSON en una columna de texto fue genial para prototipar y será un dolor para hacer búsquedas y reporting. En algún momento toca normalizar.
+- **Lógica de créditos dentro del worker**. Mezclar billing con generación es práctico hoy y querré aislarlo cuando el sistema madure.
+- **El refill de créditos como bucle en el arranque de FastAPI**. Resolver las recargas mensuales con una corutina infinita no sobrevive a un despliegue horizontal. Su sitio natural es Celery Beat o un scheduler externo.
 
-El texto usa Groq vía `langchain_groq.ChatGroq` con el modelo:
+Ninguno de estos es un bug. Son deudas conscientes: el precio que pagué por avanzar rápido, anotado para cuando toque cobrarlo.
 
-- `llama-3.3-70b-versatile`
+---
 
-Groq encaja aquí por latencia y coste razonable para una experiencia conversacional o creativa.
+## Lo que me llevo
 
-### Generación de imágenes
+Si tuviera que destilar el proyecto en unas pocas ideas:
 
-Las imágenes usan OpenAI desde `api/agents/utils.py`.
+**Una IA útil necesita un pipeline, no un modelo.** El valor no estaba en invocar un LLM, sino en encadenar prompt engineering, validación estructurada, generación de imágenes, persistencia, auth, billing y UX en algo que no se rompa.
 
-El sistema soporta varios modelos:
+**Identifica qué no puede ser no-determinista, y blíndalo.** La consistencia de personajes no la resolvió un modelo mejor, sino decidir qué información no debía tocar ningún modelo. Esa frontera entre lo creativo y lo determinista es donde vive la calidad.
 
-- `dall-e-3`
-- `dall-e-2`
-- `gpt-image-1`
-- `gpt-image-1-mini`
-- `gpt-image-1.5`
+**Los prompts son código de producto.** Acaban versionados, localizados a seis idiomas, testeados con un evaluador de seguridad y tan críticos como cualquier función. Tratarlos como strings sueltos es subestimarlos.
 
-Según el modelo, la respuesta se procesa como:
+**La UX importa tanto como el modelo.** Que el usuario no espere bloqueado, que un formulario guiado produzca mejores cuentos que el texto libre, que el PDF use una fuente para disléxicos: nada de eso sale del modelo, y todo eso es el producto.
 
-- URL remota,
-- o base64.
+---
 
-Después la imagen se sube a Supabase Storage para que la aplicación no dependa de una URL efímera del proveedor original.
+## Cierre
 
-Esta decisión tiene bastante sentido operativo:
+Cuentee empezó como un script de cuarenta líneas que ya "funcionaba". El verdadero trabajo no fue hacer que un modelo escribiera un cuento —eso fue el primer día—, sino convertir esa chispa en algo coherente, seguro, trazable y agradable de usar.
 
-- centraliza activos en una infraestructura propia,
-- facilita persistencia,
-- simplifica permisos,
-- y evita exponer directamente artefactos de proveedor.
+Si tuviera que resumir la arquitectura en una frase:
 
-## 11. Supabase Storage como repositorio de medios
+> Cuentee convierte un prompt autenticado en un artefacto narrativo persistente mediante un pipeline multimodal, asíncrono y observable, en el que lo que importa de cada personaje nunca lo decide dos veces un modelo.
 
-El proyecto usa dos buckets conceptualmente distintos:
+Y esa, sospecho, es la forma correcta de pensar la mayoría de productos de IA hoy: no como un wrapper alrededor de una API, sino como una cadena de producción donde el modelo es solo una pieza —brillante, impredecible y, por eso mismo, algo que hay que saber encuadrar.
 
-- `cuentee_images`
-- `cuentee_pdfs`
-
-En imágenes, el flujo es especialmente interesante porque no usa el service role para subir activos del cuento. El sistema construye un cliente S3-compatible autenticado con el JWT del usuario actual y lo usa para subir al storage de Supabase.
-
-Eso implica que el contexto del usuario se propaga más allá de la base de datos y llega hasta el almacenamiento de objetos.
-
-El naming de archivos sigue esta idea:
-
-- usuario,
-- historia,
-- tipo de imagen,
-- sufijo único.
-
-Ejemplo conceptual:
-
-```text
-<user_id>/<story_id>/chapter_1_ab12cd34.png
-```
-
-## 12. Celery y Redis: desacoplar lo lento de lo interactivo
-
-La generación de cuentos ilustrados puede tardar bastante:
-
-- invocación al LLM,
-- múltiples imágenes,
-- subidas a storage,
-- escritura en base de datos,
-- render a PDF.
-
-Hacer eso en la request HTTP sería un error de diseño. Por eso el proyecto usa:
-
-- Redis como broker,
-- Celery como cola,
-- FastAPI como productor de tareas,
-- workers como consumidores.
-
-La tarea principal está en `api/celery_tasks/tasks.py`:
-
-- `generate_story_task`
-
-Esa tarea:
-
-1. construye metadatos de trazabilidad,
-2. invoca el grafo,
-3. recoge `story_data`,
-4. ejecuta postproceso,
-5. retorna el resultado final.
-
-Además incorpora `self.retry(..., max_retries=3)`, lo que da una política básica de resiliencia ante fallos transitorios.
-
-## 13. LangSmith para trazabilidad
-
-Hay varias anotaciones `@traceable` y metadatos ricos de ejecución.
-
-Eso convierte cada generación en una unidad observable con atributos como:
-
-- `story_type`
-- `topic`
-- `user_id`
-- `language`
-- `model`
-- `story_id`
-
-En sistemas con IA esto importa mucho. No basta con saber que “falló algo”; hay que saber:
-
-- con qué prompt,
-- con qué configuración,
-- para qué usuario,
-- en qué idioma,
-- con qué modelo.
-
-Cuentee ya está encaminado hacia esa observabilidad.
-
-## 14. El postproceso: PDF, persistencia y créditos
-
-Una vez generado el cuento, el worker entra en postproceso.
-
-### Generación de PDF
-
-`api/services/pdf_service.py` usa `fpdf` y `Pillow` para producir un PDF con:
-
-- tipografía OpenDyslexic,
-- portada,
-- marcos decorativos,
-- imágenes redondeadas,
-- fondo visual,
-- CTA final hacia `cuentee.com`.
-
-No es un dump plano de texto. Intenta convertir el cuento en un artefacto presentable y descargable.
-
-### Persistencia
-
-Después se inserta un registro en `stories` con:
-
-- `title`
-- `content`
-- `prompt`
-- `story_type`
-- `metadata`
-
-### Créditos
-
-Al final se descuentan créditos del perfil del usuario.
-
-Además, `api/main.py` lanza una tarea en background en startup que revisa diariamente qué usuarios `plus` deben recibir recarga periódica de créditos.
-
-No es un scheduler distribuido sofisticado, pero sí una forma rápida de introducir lógica de suscripción sin otro servicio adicional.
-
-## 15. Entrada por voz en tiempo real
-
-Una parte menos obvia del sistema es `api/routers/transcription.py`.
-
-Aquí el frontend abre un WebSocket y envía chunks de audio `webm` capturados con `MediaRecorder`. El backend crea un puente entre FastAPI asíncrono y el cliente síncrono de Speechmatics mediante:
-
-- una cola,
-- un buffer,
-- un thread dedicado.
-
-El resultado se reenvía al navegador como mensajes:
-
-- `partial`
-- `final`
-
-El frontend, por ahora, solo incorpora el texto final al prompt para evitar una UX ruidosa con parciales. Es una decisión sensata: la complejidad del streaming se usa para mejorar entrada, no para volver inestable la edición del texto.
-
-## 16. Qué hace bien esta arquitectura
-
-Hay varias decisiones acertadas en esta rama.
-
-### 1. Contrato estructurado con Pydantic
-
-La historia no viaja como texto libre, sino como objeto validado. Eso reduce errores de parsing y hace más robusto todo el pipeline.
-
-### 2. Asincronía bien aplicada
-
-La UI no se bloquea esperando generación. FastAPI solo acepta el trabajo y Celery hace lo pesado.
-
-### 3. Supabase como plataforma transversal
-
-Supabase cubre:
-
-- auth,
-- base de datos,
-- storage,
-- RLS.
-
-Eso reduce el número de piezas operativas.
-
-### 4. Prompting localizado
-
-No se limita a traducir la interfaz; también traduce y adapta la instrucción de generación.
-
-### 5. Orquestación preparada para crecer
-
-Aunque hoy el grafo es lineal, usar LangGraph facilita introducir nodos futuros como:
-
-- moderación,
-- evaluación automática,
-- reintentos selectivos,
-- generación de audio,
-- control de calidad visual.
-
-## 17. Dónde están las limitaciones actuales
-
-Como prototipo avanzado, también deja ver sus siguientes cuellos de botella.
-
-### Polling en lugar de push para tareas
-
-Funciona, pero a medida que crezca el tráfico probablemente convenga mover el resultado de Celery a SSE o WebSocket.
-
-### Persistencia semiestructurada en `content`
-
-Guardar toda la historia como JSON serializado acelera el desarrollo, pero complica analytics, búsquedas y reporting.
-
-### Lógica de créditos embebida en worker
-
-Es práctica, pero mezcla generación con billing básico. En un sistema más maduro convendría aislar esa contabilidad.
-
-### Task loop de recarga dentro de FastAPI
-
-Resolver recargas mensuales con una coroutine infinita en startup no es ideal para despliegues horizontales. Lo natural sería moverlo a un scheduler externo o a Celery Beat.
-
-## 18. Lecciones de ingeniería que deja este proyecto
-
-Cuentee enseña varias lecciones útiles para construir productos con IA más allá del “demo prompt-in, text-out”.
-
-### 1. La IA útil necesita pipeline, no solo modelo
-
-El valor no está únicamente en invocar un LLM. Está en unir:
-
-- prompt engineering,
-- validación estructurada,
-- assets visuales,
-- persistencia,
-- auth,
-- billing,
-- UX.
-
-### 2. El storage importa tanto como el modelo
-
-Si generas imágenes o PDFs, necesitas estrategia de activos. Centralizarlos en tu propia infraestructura simplifica el resto del sistema.
-
-### 3. La trazabilidad deja de ser opcional muy rápido
-
-En cuanto hay usuarios reales, idiomas, créditos y varios modelos, sin observabilidad es imposible depurar bien.
-
-### 4. Los productos de IA se benefician de inputs más estructurados
-
-El modo guiado demuestra que la mejor UX no siempre es “escribe cualquier cosa”. A veces un formulario bien diseñado produce mejores salidas y reduce ambigüedad.
-
-## 19. Conclusión
-
-Cuentee no es solo un generador de cuentos. Es una arquitectura bastante representativa de una nueva clase de aplicaciones AI-native:
-
-- interfaz moderna en Next.js,
-- backend ligero en FastAPI,
-- orquestación asíncrona con Celery,
-- generación multimodal con Groq y OpenAI,
-- almacenamiento y seguridad con Supabase,
-- y un producto final empaquetado como historia visual y PDF.
-
-Lo más interesante es que el sistema ya está organizado como una cadena de producción de contenido, no como una simple llamada a un modelo. Esa diferencia es justo la que separa un experimento de una aplicación que puede evolucionar hacia producto real.
-
-Si tuviera que resumir la arquitectura en una sola frase, sería esta:
-
-> Cuentee convierte un prompt autenticado en un artefacto narrativo persistente mediante un pipeline multimodal, asíncrono y observable.
-
-Y esa es, probablemente, la forma correcta de pensar muchas aplicaciones de IA actuales.
+Puedes probarlo en **[www.cuentee.com](https://www.cuentee.com)**. Si generas la historia de un cocodrilo que aprende acuarela en Florencia, cuéntame qué tal le quedó el pelo entre capítulos.
