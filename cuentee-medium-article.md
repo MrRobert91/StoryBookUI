@@ -36,10 +36,10 @@ Algunos de los que he probado:
 - *"Un cocodrilo de mediana edad que se jubila del río Nilo y decide aprender a pintar acuarelas en Florencia"*
 - *"Tres hermanas que encuentran un mapa del tesoro dentro de una enciclopedia de 1987 y tienen que descifrarlo sin que se entere su abuela"*
 - *"Cuento educativo sobre el ciclo del agua: Noa, 6 años, mochila amarilla, pelo afro y ganas de mojarse los pies, tiene que guiar a una gota de lluvia de vuelta al mar"*
-- *"Un pulpo llamado Ramón que tiene miedo a la oscuridad y vive en el fondo del océano — estilo anime, 7 capítulos"*
+- *"Un pulpo llamado Ramón que tiene miedo a la oscuridad y vive en el fondo del océano"*
 - *"La historia de Kai, un robot de cocina que sueña con ser chef estrella Michelin pero solo sabe hacer tostadas"*
 
-El resultado son entre 3 y 10 capítulos, con portada e ilustración propia para cada escena.
+El resultado son entre 3 y 9 capítulos, con portada e ilustración propia para cada escena.
 
 ---
 
@@ -49,7 +49,7 @@ No quiero aburrirte con la arquitectura, pero sí contarte la idea, porque expli
 
 Cada cuento se construye en tres pasos. Primero, un modelo de IA escribe la historia completa, capítulo a capítulo. Después, otro paso vuelve a leer esa historia y "ficha" a cada personaje con una descripción visual muy concreta, sin florituras: especie, edad, color de pelo, color de ojos, ropa. Y por último, esa ficha se usa tal cual para generar cada ilustración. Ese segundo paso es el que mantiene a los personajes coherentes de principio a fin, y es la parte que más me costó afinar.
 
-También hay una revisión de seguridad infantil: antes de dar nada por bueno, otro modelo evalúa los cuentos buscando cosas que no deberían estar ahí (violencia, contenido adulto, elementos perturbadores). No es infalible, pero prefiero tener una red que no tenerla.
+La seguridad infantil me la tomo en serio. Las instrucciones con las que se escriben los cuentos ya están pensadas para mantener un tono apropiado, y además he montado un control de calidad que revisa tandas de cuentos con criterios de idoneidad —violencia, contenido adulto, elementos perturbadores— usando otro modelo de IA como "juez": si demasiados no pasan el listón, salta la alarma y me toca mirar qué está fallando. Funciona por detrás, como un termómetro del sistema, no como un censor que apruebe cada cuento en el instante de generarlo. No es infalible, pero me permite detectar pronto si algo se desvía, y prefiero tener esa red a no tenerla.
 
 Por debajo hay bastante más fontanería —generación de texto, ilustraciones, PDFs, todo orquestado para que no esperes mirando una pantalla bloqueada—, pero eso es tema para otro artículo más técnico.
 
@@ -82,11 +82,11 @@ Pero no quiero decidirlo yo solo. ¿Cuál de estas te interesa más? ¿Hay algo 
 
 ## Pruébalo y cuéntame
 
-Si tienes hijos, sobrinos, alumnos, o simplemente quieres ver qué pasa cuando le pides a una IA la historia de un cocodrilo filósofo en estilo acuarela, pruébalo:
+Si tienes hijos, sobrinos, alumnos, o simplemente quieres ver qué pasa cuando le pides a una IA la historia de un capibara filósofo en estilo acuarela, pruébalo:
 
 **[www.cuentee.com](https://www.cuentee.com)**
 
-**¿Tienes alguna duda sobre cómo funciona? ¿Hay una funcionalidad que te gustaría ver** —narración en audio, más idiomas, impresión física, lo que sea—**? Déjala en los comentarios.** Leo todo y me ayuda a decidir qué construir después. Y si pruebas a generar un cuento, cuéntame qué tal: si la historia tiene calidad, si las ilustraciones encajaban con lo que esperabas, o si hay algo que claramente falta. Las críticas valen, quizá más que los aplausos.
+**¿Tienes alguna duda sobre cómo funciona? ¿Se te ocurre algo que lo haría mejor?** Tírate a lo loco: un cuento donde el propio niño aparezca dibujado como protagonista a partir de una foto, meter a la mascota de casa en la historia, sagas que continúan capítulo a capítulo con los mismos personajes, un cuento nuevo cada noche antes de dormir, o que sean los padres quienes pongan la voz al audiolibro. **Déjalo en los comentarios** — leo absolutamente todo y es lo que me ayuda a decidir qué construir después. Y si pruebas a generar un cuento, cuéntame qué tal te quedó: si la historia engancha, si las ilustraciones encajaban con lo que imaginabas, o si hay algo que claramente falta. Las críticas valen, quizá más que los aplausos.
 
 ---
 
