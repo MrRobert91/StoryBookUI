@@ -1,10 +1,9 @@
-import os
 import logging
 from celery import Celery
 from celery.signals import worker_ready, after_setup_logger
 
-# Configuración de Redis
-REDIS_URL = os.getenv("REDIS_URL", "redis://localhost:6379/0")
+# Usar la misma configuración (y carga de .env) que la API.
+from api.core.config import REDIS_URL
 
 # Mask Redis URL for logging
 masked_redis_url = REDIS_URL
