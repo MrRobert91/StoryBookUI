@@ -4,6 +4,7 @@ import asyncio
 from asgiref.sync import async_to_sync
 import json
 from api.celery_tasks.app import celery_app
+from api.core.config import GROQ_MODEL
 from api.agents.story_agent import graph, StoryState
 from supabase import create_client
 import logging
@@ -41,7 +42,7 @@ def generate_story_task(self, topic: str, user_id: str, jwt_token: str, model: s
             "user_id": user_id,
             "num_chapters": num_chapters,
             "language": (metadata or {}).get("language", "en"),
-            "model": model or "llama-3.3-70b-versatile",
+            "model": GROQ_MODEL,
             "image_style": bool(image_style_context),
             "story_id": str(task_id)
         }

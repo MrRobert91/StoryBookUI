@@ -55,7 +55,7 @@ Celery worker + Redis
         |
         v
 LangGraph story workflow
-  1. Generate structured story with Groq LLaMA 3.3 70B
+  1. Generate structured story with Groq GPT-OSS 120B
   2. Extract character visual descriptions
   3. Generate cover/chapter images with OpenAI image models
         |
@@ -72,7 +72,7 @@ Supabase
 |---|---|
 | Frontend | Next.js 15, React 19, TypeScript, Tailwind CSS, Radix UI, Lucide React |
 | Backend | FastAPI, Python 3.11, Celery, Redis |
-| Text AI | Groq `llama-3.3-70b-versatile` via LangChain |
+| Text AI | Groq `openai/gpt-oss-120b` via LangChain |
 | Workflow | LangGraph |
 | Image AI | OpenAI images: `dall-e-3`, `dall-e-2`, `gpt-image-1`, `gpt-image-1-mini`, `gpt-image-1.5`, `gpt-image-2-2026-04-21` |
 | Speech | Speechmatics WebSocket STT |
@@ -150,6 +150,7 @@ The backend reads these variables:
 ```env
 OPENAI_API_KEY=sk-...
 GROQ_API_KEY=gsk_...
+GROQ_MODEL=openai/gpt-oss-120b
 SUPABASE_URL=https://your-project.supabase.co
 SUPABASE_ANON_KEY=...
 SUPABASE_SERVICE_ROLE_KEY=...
@@ -159,6 +160,12 @@ STORAGE_BUCKET_NAME=cuentee_images
 IMAGE_MODEL=gpt-image-2-2026-04-21
 SPEECHMATICS_API_KEY=...
 ```
+
+`GROQ_MODEL` selects the text model for story writing, character descriptions and
+illustration prompt writing. It defaults to `openai/gpt-oss-120b` when unset or
+blank. In Sliplane, you can set it on the API and worker services to select a
+different Groq model, then save and redeploy both services. It does not change
+`IMAGE_MODEL`, which selects the OpenAI model that generates the actual images.
 
 The frontend reads these variables:
 
