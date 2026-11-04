@@ -5,7 +5,7 @@ from dotenv import load_dotenv
 load_dotenv()
 
 # URL de Redis para Celery y Health Checks
-REDIS_URL = os.getenv("REDIS_URL")
+REDIS_URL = os.getenv("REDIS_URL") or "redis://localhost:6379/0"
 
 # Credenciales de Supabase
 SUPABASE_URL = os.getenv("SUPABASE_URL")

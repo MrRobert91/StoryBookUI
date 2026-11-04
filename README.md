@@ -170,6 +170,36 @@ NEXT_PUBLIC_FASTAPI_URL=http://localhost:8000
 
 `.env.example` is a minimal starting point; add the backend Supabase and Redis values before running generation locally.
 
+### Redis Cloud database replacement
+
+The API health check, Celery broker and Celery result backend share `REDIS_URL`.
+For local development it defaults to `redis://localhost:6379/0`; hosted services
+must supply their Redis Cloud URL as a deployment secret.
+
+The replacement Cuentee instance is:
+
+- Host: `redis-13424.c135.eu-central-1-1.ec2.cloud.redislabs.com`
+- Port: `13424`
+- Username: `default`
+- Database: `0`
+- Scheme: `redis://`, matching the connection supplied for this instance
+
+Use `.env.redis-cloud.example` as the connection template and replace `PASSWORD`
+with the password from Redis Cloud. URL-encode reserved characters in passwords.
+Keep the complete URL in your hosting provider's secret/environment settings or
+an ignored local `.env` file, never in Git.
+
+When replacing a deleted database:
+
+1. Replace the existing `REDIS_URL` secret in **both** the API and Celery worker
+   services. Reusing the database name does not preserve its endpoint or password.
+2. Restart/redeploy both services so they discard the previous connections.
+3. Verify the API startup Redis check and worker broker connection succeed.
+4. Generate a test story and verify that its task completes.
+
+Merging this change does not update deployment secrets. The new database also
+does not restore queued tasks or task results from the deleted instance.
+
 ### Backend and Worker
 
 ```bash
