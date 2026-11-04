@@ -5,6 +5,7 @@ import logging
 import re
 from langchain_groq import ChatGroq
 from langgraph.graph import StateGraph, START, END
+from api.core.config import GROQ_MODEL
 
 from api.prompts.story_prompts import get_story_system_prompt, get_image_prompt_system, get_character_extraction_prompt, DEFAULT_NUM_CHAPTERS, WORDS_PER_CHAPTER
 # Import utilities from the sibling module
@@ -28,7 +29,7 @@ if not groq_key:
 logger.info("Building story_agent (Groq)...")
 story_llm = ChatGroq(
     groq_api_key=groq_key,
-    model="llama-3.3-70b-versatile",
+    model=GROQ_MODEL,
     temperature=0.7,
 )
 
@@ -38,7 +39,7 @@ logger.info(f"story_agent ready (configured for ~{WORDS_PER_CHAPTER} words per c
 logger.info("Building image_llm (Groq)...")
 image_llm = ChatGroq(
     groq_api_key=groq_key,
-    model="llama-3.3-70b-versatile",
+    model=GROQ_MODEL,
     temperature=0.2,
 )
 logger.info("image_llm ready")
