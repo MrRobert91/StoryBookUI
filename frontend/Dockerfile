@@ -1,14 +1,12 @@
 # Stage 1: Dependencies builder
 FROM node:20-alpine AS deps
 WORKDIR /app
-COPY package.json pnpm-lock.yaml* ./
-RUN npm install -g pnpm && pnpm install --frozen-lockfile
+COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
+RUN npm install -g "$(node -p "require('./package.json').packageManager")" && \
+    pnpm install --frozen-lockfile
 
 # Stage 2: Builder
-FROM node:20-alpine AS builder
-WORKDIR /app
-COPY package.json pnpm-lock.yaml* ./
-RUN npm install -g pnpm && pnpm install --frozen-lockfile
+FROM deps AS builder
 COPY . .
 
 # --- IMPORTANTE: Definir los marcadores para el build ---
@@ -55,7 +53,7 @@ RUN echo '#!/bin/sh' > /app/entrypoint.sh && \
 EXPOSE 3000
 
 HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \
-    CMD wget --no-verbose --tries=1 --spider http://localhost:3000/api/health || exit 1
+    CMD wget --no-verbose --tries=1 --spider http://127.0.0.1:3000/api/health || exit 1
 
 # Ejecutar script como root (él cambiará a nextjs internamente)
 ENTRYPOINT ["/app/entrypoint.sh"]

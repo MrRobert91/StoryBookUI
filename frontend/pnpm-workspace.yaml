@@ -1,0 +1,5 @@
+# Keep dependency build scripts explicit, including in non-interactive Docker builds.
+allowBuilds:
+  sharp: true
+  unrs-resolver: true
+strictDepBuilds: true
