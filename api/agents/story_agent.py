@@ -26,7 +26,7 @@ if not groq_key:
 # ============================================================================
 # AGENTS SETUP
 # ============================================================================
-logger.info("Building story_agent (Groq)...")
+logger.info("Building story_agent (Groq model=%s)...", GROQ_MODEL)
 story_llm = ChatGroq(
     groq_api_key=groq_key,
     model=GROQ_MODEL,
@@ -36,7 +36,7 @@ story_llm = ChatGroq(
 story_agent = story_llm.with_structured_output(Story, method="json_mode")
 logger.info(f"story_agent ready (configured for ~{WORDS_PER_CHAPTER} words per chapter)")
 
-logger.info("Building image_llm (Groq)...")
+logger.info("Building image_llm (Groq model=%s)...", GROQ_MODEL)
 image_llm = ChatGroq(
     groq_api_key=groq_key,
     model=GROQ_MODEL,

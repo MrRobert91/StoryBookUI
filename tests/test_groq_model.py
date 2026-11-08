@@ -1,6 +1,8 @@
 import json
 from pathlib import Path
 import runpy
+from types import SimpleNamespace
+from unittest.mock import MagicMock
 
 import dotenv
 import groq
@@ -11,15 +13,24 @@ from api.agents import story_agent as agents
 from api.core.config import GROQ_MODEL
 
 
-@pytest.mark.parametrize("value", [None, "", "  ", "custom-groq-model"])
-def test_groq_model_configuration(monkeypatch, value):
+@pytest.mark.parametrize("value, expected", [
+    (None, "openai/gpt-oss-120b"),
+    ("", "openai/gpt-oss-120b"),
+    ("  ", "openai/gpt-oss-120b"),
+    ("custom-groq-model", "custom-groq-model"),
+    ("llama-3.3-70b-versatile", "openai/gpt-oss-120b"),
+    (" llama-3.3-70b-versatile ", "openai/gpt-oss-120b"),
+])
+def test_groq_model_configuration(monkeypatch, caplog, value, expected):
     monkeypatch.setattr(dotenv, "load_dotenv", lambda: None)
     monkeypatch.delenv("GROQ_MODEL", raising=False)
     if value is not None:
         monkeypatch.setenv("GROQ_MODEL", value)
     config_path = Path(__file__).resolve().parents[1] / "api/core/config.py"
     config = runpy.run_path(str(config_path))
-    assert config["GROQ_MODEL"] == (value.strip() if value and value.strip() else "openai/gpt-oss-120b")
+    assert config["GROQ_MODEL"] == expected
+    if value and value.strip() == "llama-3.3-70b-versatile":
+        assert "Update GROQ_MODEL in both API and worker settings" in caplog.text
 
 
 def test_groq_requests_use_configured_model_and_parse_story(monkeypatch):
@@ -51,4 +62,15 @@ def test_groq_requests_use_configured_model_and_parse_story(monkeypatch):
     assert image_prompt == "A friendly cloud in a storybook sky."
     assert len(requests) == 2
     assert all(request["model"] == GROQ_MODEL for request in requests)
+    assert all(request["model"] != "llama-3.3-70b-versatile" for request in requests)
     assert requests[0]["response_format"] == {"type": "json_object"}
+
+
+def test_worker_logs_effective_model_and_deployment_commit(monkeypatch, caplog):
+    from api.celery_tasks.app import at_start
+
+    monkeypatch.setenv("SLIPLANE_COMMIT_HASH", "test-deployed-commit")
+    app = MagicMock()
+    with caplog.at_level("INFO"):
+        at_start(SimpleNamespace(app=app))
+    assert f"Groq model={GROQ_MODEL}; deployment commit=test-deployed-commit" in caplog.text

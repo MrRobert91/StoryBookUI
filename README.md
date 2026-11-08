@@ -167,6 +167,25 @@ blank. In Sliplane, you can set it on the API and worker services to select a
 different Groq model, then save and redeploy both services. It does not change
 `IMAGE_MODEL`, which selects the OpenAI model that generates the actual images.
 
+Older deployments with `GROQ_MODEL=llama-3.3-70b-versatile` are migrated to
+`openai/gpt-oss-120b` with a warning. Other explicit model choices are preserved.
+
+If the frontend still reports `model_not_found` for Llama after merging:
+
+1. In Sliplane, check that **both API and worker** deploy from `main` and that the
+   worker uses `api/celery_tasks/Dockerfile.worker` with the repository root as
+   its build context.
+2. Set `GROQ_MODEL=openai/gpt-oss-120b` in both services, then **save and redeploy**
+   them. Restarting the existing container does not rebuild its code.
+3. Verify the worker startup log contains `Worker configuration: Groq
+   model=openai/gpt-oss-120b` and compare `deployment commit` with the deployed
+   commit in Sliplane (it is `unknown` outside Sliplane).
+4. Generate a **new** story. A failed Celery task retains its previous error;
+   polling that task again does not rerun it with the updated code.
+
+The frontend displays the worker's task failure; changing frontend image-model
+settings cannot fix a Groq text-model error.
+
 The frontend reads these variables:
 
 ```env

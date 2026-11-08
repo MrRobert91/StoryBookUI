@@ -25,6 +25,7 @@ else:
 def generate_story_task(self, topic: str, user_id: str, jwt_token: str, model: str | None = None, image_style_context: str | None = None, num_chapters: int | None = None, story_type: str = "open", metadata: dict = None):
     task_id = self.request.id
     logger.info(f" [Task {task_id}] RECEIVED by worker.")
+    logger.info(" [Task %s] Groq text model: %s", task_id, GROQ_MODEL)
     logger.info(f" [Task {task_id}] INPUT -> User: {user_id} | Topic: '{topic}' | Model: {model} | Style Context: {bool(image_style_context)} | Chapters: {num_chapters}")
     
     try:
