@@ -1,4 +1,5 @@
 import os
+import logging
 from dotenv import load_dotenv
 
 # Cargar variables de entorno desde un archivo .env para desarrollo local
@@ -14,7 +15,16 @@ SUPABASE_SERVICE_ROLE_KEY = os.getenv("SUPABASE_SERVICE_ROLE_KEY")
 
 # Credenciales y modelo de texto de Groq
 GROQ_API_KEY = os.getenv("GROQ_API_KEY")
-GROQ_MODEL = os.getenv("GROQ_MODEL", "").strip() or "openai/gpt-oss-120b"
+DEFAULT_GROQ_MODEL = "openai/gpt-oss-120b"
+GROQ_MODEL = os.getenv("GROQ_MODEL", "").strip() or DEFAULT_GROQ_MODEL
+# Older deployments may still override the new default with the retired model.
+if GROQ_MODEL == "llama-3.3-70b-versatile":
+    logging.getLogger(__name__).warning(
+        "GROQ_MODEL=llama-3.3-70b-versatile is retired for this deployment; "
+        "using %s. Update GROQ_MODEL in both API and worker settings.",
+        DEFAULT_GROQ_MODEL,
+    )
+    GROQ_MODEL = DEFAULT_GROQ_MODEL
 
 # Podríamos añadir validaciones aquí para asegurar que las variables críticas estén definidas
 # Por ejemplo:
