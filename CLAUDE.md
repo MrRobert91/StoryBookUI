@@ -85,6 +85,6 @@ All prompts (story system prompt, image prompt, character extraction, guided bui
 ## Environment
 
 Required: `OPENAI_API_KEY`, `GROQ_API_KEY`, `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY`, `SUPABASE_SERVICE_ROLE_KEY`, `SUPABASE_PROJECT_REF`, `REDIS_URL`, `STORAGE_BUCKET_NAME`.
-Optional: `SPEECHMATICS_API_KEY` (voice input), `LANGCHAIN_TRACING_V2` + `LANGCHAIN_API_KEY` (LangSmith), `IMAGE_MODEL` (one of `dalle-3`, `dalle-2`, `gpt-image-1`, `gpt-image-1-mini`, `gpt-image-1.5`).
+Optional: `SPEECHMATICS_API_KEY` (voice input), `LANGCHAIN_TRACING_V2` + `LANGCHAIN_API_KEY` (LangSmith), `IMAGE_MODEL` (container-only image model selection, defaults to `gpt-image-2-2026-04-21`; supports `gpt-image-2.5-flare` and `gpt-image-2.5-sunburst`, including dated snapshots). Set `IMAGE_MODEL` on both API and worker and redeploy. GPT Image uses quality `low`; invalid model names fail at startup. See `api/core/config.py` for the complete model list.
 
 `api/agents/utils.py` raises `EnvironmentError` at import time if `OPENAI_API_KEY` or `SUPABASE_ANON_KEY` is missing, so any test or script that imports the agents package must set these (the test suite does this via `conftest.py`).

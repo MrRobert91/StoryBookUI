@@ -26,6 +26,26 @@ if GROQ_MODEL == "llama-3.3-70b-versatile":
     )
     GROQ_MODEL = DEFAULT_GROQ_MODEL
 
+DEFAULT_IMAGE_MODEL = "gpt-image-2-2026-04-21"
+GPT_IMAGE_MODELS = {
+    "gpt-image-1", "gpt-image-1-mini", "gpt-image-1.5",
+    "gpt-image-2", "gpt-image-2-2026-04-21",
+    "gpt-image-2.5-flare", "gpt-image-2.5-flare-2026-09-08",
+    "gpt-image-2.5-sunburst", "gpt-image-2.5-sunburst-2026-09-08",
+}
+IMAGE_MODELS = {model: model for model in GPT_IMAGE_MODELS}
+IMAGE_MODELS.update({
+    "dalle-2": "dall-e-2", "dall-e-2": "dall-e-2",
+    "dalle-3": "dall-e-3", "dall-e-3": "dall-e-3",
+})
+_configured_image_model = os.getenv("IMAGE_MODEL", "").strip().lower() or DEFAULT_IMAGE_MODEL
+if _configured_image_model not in IMAGE_MODELS:
+    raise ValueError(
+        f"Unsupported IMAGE_MODEL={_configured_image_model!r}. "
+        f"Choose one of: {', '.join(sorted(IMAGE_MODELS))}"
+    )
+IMAGE_MODEL = IMAGE_MODELS[_configured_image_model]
+
 # Podríamos añadir validaciones aquí para asegurar que las variables críticas estén definidas
 # Por ejemplo:
 # if not SUPABASE_URL or not SUPABASE_ANON_KEY:

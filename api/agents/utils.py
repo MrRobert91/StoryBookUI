@@ -9,6 +9,7 @@ from typing import List
 from botocore.client import Config
 from openai import OpenAI
 from dotenv import load_dotenv
+from api.core.config import GPT_IMAGE_MODELS, IMAGE_MODEL
 from pydantic import BaseModel, Field
 from typing_extensions import TypedDict
 
@@ -179,28 +180,18 @@ class StoryState(TypedDict):
 # ============================================================================
 # IMAGE GENERATION LOGIC
 # ============================================================================
-IMAGE_MODELS = {
-    "dalle-3": "dall-e-3",
-    "dalle-2": "dall-e-2",
-    "gpt-image-1": "gpt-image-1",
-    "gpt-image-1-mini": "gpt-image-1-mini",
-    "gpt-image-1.5": "gpt-image-1.5",
-    "gpt-image-2-2026-04-21": "gpt-image-2-2026-04-21",
-}
-GPT_IMAGE_MODELS = {
-    "gpt-image-1",
-    "gpt-image-1-mini",
-    "gpt-image-1.5",
-    "gpt-image-2-2026-04-21",
-}
-DEFAULT_IMAGE_MODEL = os.getenv("IMAGE_MODEL", "gpt-image-2-2026-04-21").strip().lower()
-SELECTED_IMAGE_MODEL = IMAGE_MODELS.get(DEFAULT_IMAGE_MODEL, "gpt-image-2-2026-04-21")
 _image_counter = {"cover": 0, "chapter": 0}
 
 @traceable(run_type="tool", name="image_generation")
 def generate_image(prompt: str, model: str = None, image_type: str = "image") -> str:
-    """Generate image using OpenAI and upload to Supabase."""
-    model_name = IMAGE_MODELS.get((model or SELECTED_IMAGE_MODEL).lower(), SELECTED_IMAGE_MODEL)
+    """Generate with IMAGE_MODEL and upload to Supabase.
+
+    The legacy model argument is accepted for queued jobs, but cannot override
+    the deployment's environment configuration.
+    """
+    model_name = IMAGE_MODEL
+    if model:
+        logger.warning("Ignoring legacy image model override; using IMAGE_MODEL=%s", model_name)
     logger.info(f"Generating image with {model_name}, prompt length: {len(prompt)}")
     
     try:
