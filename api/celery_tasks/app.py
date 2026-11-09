@@ -4,7 +4,7 @@ from celery import Celery
 from celery.signals import worker_ready, after_setup_logger
 
 # Usar la misma configuración (y carga de .env) que la API.
-from api.core.config import REDIS_URL, GROQ_MODEL
+from api.core.config import REDIS_URL, GROQ_MODEL, IMAGE_MODEL
 
 # Mask Redis URL for logging
 masked_redis_url = REDIS_URL
@@ -35,6 +35,7 @@ def setup_loggers(logger, *args, **kwargs):
 @worker_ready.connect
 def at_start(sender, **kwargs):
     """Log connection details when worker starts"""
+    logger.info("Image generation configuration: IMAGE_MODEL=%s", IMAGE_MODEL)
     logger.info(
         "Worker configuration: Groq model=%s; deployment commit=%s",
         GROQ_MODEL, os.getenv("SLIPLANE_COMMIT_HASH", "unknown"),

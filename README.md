@@ -74,7 +74,7 @@ Supabase
 | Backend | FastAPI, Python 3.11, Celery, Redis |
 | Text AI | Groq `openai/gpt-oss-120b` via LangChain |
 | Workflow | LangGraph |
-| Image AI | OpenAI images: `dall-e-3`, `dall-e-2`, `gpt-image-1`, `gpt-image-1-mini`, `gpt-image-1.5`, `gpt-image-2-2026-04-21` |
+| Image AI | OpenAI images: GPT Image 2.5 Flare / Sunburst, GPT Image 2, and legacy GPT Image / DALL·E models |
 | Speech | Speechmatics WebSocket STT |
 | Data/Auth | Supabase PostgreSQL, Auth, and Storage |
 | PDFs | fpdf2 with bundled fonts |
@@ -166,6 +166,46 @@ illustration prompt writing. It defaults to `openai/gpt-oss-120b` when unset or
 blank. In Sliplane, you can set it on the API and worker services to select a
 different Groq model, then save and redeploy both services. It does not change
 `IMAGE_MODEL`, which selects the OpenAI model that generates the actual images.
+
+Image generation is controlled exclusively by `IMAGE_MODEL` in the container
+environment. Set **one** of the following values on both the API and worker
+services in Sliplane (the worker generates the images):
+
+```env
+# GPT Image 2.5 Flare
+IMAGE_MODEL=gpt-image-2.5-flare
+```
+
+```env
+# GPT Image 2.5 Sunburst
+IMAGE_MODEL=gpt-image-2.5-sunburst
+```
+
+For reproducible versions, use `gpt-image-2.5-flare-2026-09-08` or
+`gpt-image-2.5-sunburst-2026-09-08`. To return to the previous model, set
+`IMAGE_MODEL=gpt-image-2-2026-04-21`. No other model variable is needed.
+All GPT Image options use `quality=low`, `size=1024x1024`, and base64 uploads.
+The text model remains controlled separately by `GROQ_MODEL`.
+
+Save and **redeploy/recreate both containers** after changing their environment.
+Deploy the code with GPT Image 2.5 support first; older builds do not recognize
+these values. No source edit or new image build is needed for subsequent model
+switches. Check the worker startup log for
+`Image generation configuration: IMAGE_MODEL=...`.
+
+With Docker Compose, put the chosen `IMAGE_MODEL` in the Compose `.env` file or
+export it in the shell, then run `docker compose up -d --force-recreate api worker`.
+Compose passes the same setting to both services instead of forcing DALL·E 3.
+Unset or blank values default to `gpt-image-2-2026-04-21`; unsupported values fail
+at startup with the list of accepted models rather than silently using another.
+Legacy per-story `model` overrides are ignored, including in previously queued jobs.
+
+Other accepted values are `gpt-image-2`, `gpt-image-1.5`, `gpt-image-1-mini`,
+`gpt-image-1`, `dall-e-2`, and `dall-e-3` (also `dalle-2` / `dalle-3`).
+Legacy identifiers are retained for compatibility; provider availability and
+account access still apply. Official model references:
+[Flare](https://developers.openai.com/api/docs/models/gpt-image-2.5-flare) and
+[Sunburst](https://developers.openai.com/api/docs/models/gpt-image-2.5-sunburst).
 
 Older deployments with `GROQ_MODEL=llama-3.3-70b-versatile` are migrated to
 `openai/gpt-oss-120b` with a warning. Other explicit model choices are preserved.
