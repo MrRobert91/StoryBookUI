@@ -6,7 +6,7 @@ AI-powered children's story generator for creating illustrated, multilingual tal
 
 ## Screenshots
 
-Screenshots were captured from `https://www.cuentee.com` on 2026-05-31 with a signed-in account.
+Reference screenshots stored in `docs/screenshots/`. They illustrate the UI and are not a live deployment check.
 
 | Home | Public gallery |
 |:-:|:-:|
@@ -55,7 +55,7 @@ Celery worker + Redis
         |
         v
 LangGraph story workflow
-  1. Generate structured story with Groq GPT-OSS 120B
+  1. Generate structured story with the configured Groq model
   2. Extract character visual descriptions
   3. Generate cover/chapter images with OpenAI image models
         |
@@ -72,7 +72,7 @@ Supabase
 |---|---|
 | Frontend | Next.js 15, React 19, TypeScript, Tailwind CSS, Radix UI, Lucide React |
 | Backend | FastAPI, Python 3.11, Celery, Redis |
-| Text AI | Groq `openai/gpt-oss-120b` via LangChain |
+| Text AI | Groq via LangChain; default `openai/gpt-oss-120b`, configurable with `GROQ_MODEL` |
 | Workflow | LangGraph |
 | Image AI | OpenAI images: GPT Image 2.5 Flare / Sunburst, GPT Image 2, and legacy GPT Image / DALL·E models |
 | Speech | Speechmatics WebSocket STT |
@@ -124,136 +124,164 @@ Guided stories use the same Celery and LangGraph pipeline, but the backend first
 
 ## Character Consistency
 
-The backend keeps character descriptions stable across images:
+The backend reuses character descriptions to improve consistency across images:
 
 1. `character_extraction_node` reads the full generated story and creates concrete visual descriptions.
 2. `_build_chapter_character_block` selects only the characters that appear in each chapter.
 3. `make_image_prompt` appends the selected descriptions verbatim to the image prompt so they are not rewritten by another LLM call.
 
-Preserve this invariant when editing `api/agents/story_agent.py` or `api/agents/utils.py`.
+This is text-based guidance: the current pipeline does not pass reference images between chapters and does not guarantee identical characters. Preserve the verbatim description block when editing `api/agents/story_agent.py` or `api/agents/utils.py`.
 
 ## Quick Start
 
 ### Prerequisites
 
 - Python 3.11+
-- Node.js 18+ for local frontend development
+- Node.js 20 (matching the frontend Dockerfile) and pnpm 10.28.2 (pinned in `frontend/package.json`)
 - Redis for Celery
 - Supabase project
 - OpenAI and Groq API keys
 - Optional: Speechmatics API key for voice input
 
-### Environment
+### Environment variables
 
-The backend reads these variables:
+Copy `.env.example` to `.env` in the repository root and replace all example
+credentials. The backend loads `.env` using `python-dotenv`; existing process or
+container environment values take precedence. Never commit real credentials.
+For local Next.js development, put the frontend variables in
+`frontend/.env.local` (the root `.env` is not the frontend's env file).
+
+#### Backend: credentials and connections
+
+Configure these on both API and worker containers for a full deployment.
+Credentials have no built-in usable defaults.
+
+| Variable | Accepted value / default | Purpose |
+|---|---|---|
+| `OPENAI_API_KEY` | OpenAI API key for an account with access to the selected image model; required | Image generation. Missing or empty values fail during agent import. |
+| `GROQ_API_KEY` | Groq API key; required | Story writing, character descriptions and illustration prompt writing. Missing or empty values fail during agent import. |
+| `SUPABASE_URL` | Project API URL, e.g. `https://PROJECT_REF.supabase.co`; required | Auth, database and storage operations. |
+| `SUPABASE_ANON_KEY` | The project's anon key; required | User-scoped Supabase client and JWT-authenticated image storage uploads. |
+| `SUPABASE_SERVICE_ROLE_KEY` | The project's service-role key; required for the complete API/worker workflow | Server-side story persistence, PDF uploads and credit operations. Keep this backend-only. |
+| `SUPABASE_PROJECT_REF` | Your project's reference string | Image S3 endpoint is derived as `https://REF.storage.supabase.co/storage/v1/s3`. Code defaults to `qvzbjollfgllkxxzlsoa`; explicitly set your own reference. |
+| `REDIS_URL` | Redis connection URL; default `redis://localhost:6379/0` when missing or empty | Shared Celery broker, result backend and API startup connectivity check. Use `redis://USER:PASSWORD@HOST:PORT/DB` or a TLS `rediss://...` URL as required by the service. URL-encode credentials. Inside Docker, `localhost` means that container. |
+| `STORAGE_BUCKET_NAME` | Existing Supabase image bucket name; default `cuentee_images` when unset | Image uploads. The PDF bucket is separately hardcoded to `cuentee_pdfs`; this variable does not change it. |
+| `SPEECHMATICS_API_KEY` | Speechmatics API key; optional | Needed only for voice transcription; missing/empty values close the transcription WebSocket with code 1011. |
+
+Create/configure the image and PDF storage buckets and their access policies in
+Supabase. Image storage uses the user's JWT; PDF storage uses the service-role
+client. Environment variables do not create buckets or database tables.
+`SUPABASE_KEY` is present in the root Compose file but is **not read by the
+backend** and cannot replace the anon and service-role variables above.
+
+#### Backend: models and story defaults
+
+| Variable | Accepted value / default | Behavior |
+|---|---|---|
+| `IMAGE_MODEL` | Exact options listed below; default `gpt-image-2-2026-04-21` when missing, empty or whitespace | Sole effective image-model selection. Trimmed and lowercased. Unsupported values fail at startup with the accepted names. Legacy per-story overrides are ignored. |
+| `GROQ_MODEL` | A Groq model identifier available to your account and compatible with the workflow's JSON output; default `openai/gpt-oss-120b` when missing, empty or whitespace | Shared text model for stories, character extraction and illustration prompts. The application has no fixed allowlist. The legacy value `llama-3.3-70b-versatile` is replaced with the default and a warning; other explicit choices are sent unchanged. |
+| `NUM_CHAPTERS` | Integer string; default `10` when unset | Prompt default when a workflow does not supply a chapter count. The open-story API request defaults to `3`; guided requests require a count. Request values take precedence. No environment range validation is implemented; use a positive integer. Blank/non-integer strings fail when prompts are imported. |
+
+`IMAGE_MODEL` options accepted by `api/core/config.py`:
+
+| Family | Environment values |
+|---|---|
+| GPT Image 2.5 Flare | `gpt-image-2.5-flare`, `gpt-image-2.5-flare-2026-09-08` |
+| GPT Image 2.5 Sunburst | `gpt-image-2.5-sunburst`, `gpt-image-2.5-sunburst-2026-09-08` |
+| GPT Image 2 | `gpt-image-2`, `gpt-image-2-2026-04-21` (default) |
+| Earlier GPT Image | `gpt-image-1.5`, `gpt-image-1-mini`, `gpt-image-1` |
+| Legacy DALL·E | `dall-e-3` / `dalle-3`, `dall-e-2` / `dalle-2` |
+
+This table describes **code acceptance**, not guaranteed provider availability.
+Legacy models may be retired; the API account must have access to the chosen
+model. GPT Image 2.6 is not in this application's allowlist.
+
+All GPT Image options use `quality="low"`, `size="1024x1024"`, `n=1` and base64
+image uploads. DALL·E uses URL uploads, with `style="vivid"` for DALL·E 3.
+There are currently **no** `IMAGE_QUALITY`, `IMAGE_SIZE`, image-provider or PDF
+bucket environment settings. The image model does not select the text model.
+
+For Flare, set:
 
 ```env
-OPENAI_API_KEY=sk-...
-GROQ_API_KEY=gsk_...
-GROQ_MODEL=openai/gpt-oss-120b
-SUPABASE_URL=https://your-project.supabase.co
-SUPABASE_ANON_KEY=...
-SUPABASE_SERVICE_ROLE_KEY=...
-SUPABASE_PROJECT_REF=your-project-ref
-REDIS_URL=redis://localhost:6379/0
-STORAGE_BUCKET_NAME=cuentee_images
-IMAGE_MODEL=gpt-image-2-2026-04-21
-SPEECHMATICS_API_KEY=...
-```
-
-`GROQ_MODEL` selects the text model for story writing, character descriptions and
-illustration prompt writing. It defaults to `openai/gpt-oss-120b` when unset or
-blank. In Sliplane, you can set it on the API and worker services to select a
-different Groq model, then save and redeploy both services. It does not change
-`IMAGE_MODEL`, which selects the OpenAI model that generates the actual images.
-
-Image generation is controlled exclusively by `IMAGE_MODEL` in the container
-environment. Set **one** of the following values on both the API and worker
-services in Sliplane (the worker generates the images):
-
-```env
-# GPT Image 2.5 Flare
 IMAGE_MODEL=gpt-image-2.5-flare
 ```
 
+For Sunburst, set instead:
+
 ```env
-# GPT Image 2.5 Sunburst
 IMAGE_MODEL=gpt-image-2.5-sunburst
 ```
 
-For reproducible versions, use `gpt-image-2.5-flare-2026-09-08` or
-`gpt-image-2.5-sunburst-2026-09-08`. To return to the previous model, set
-`IMAGE_MODEL=gpt-image-2-2026-04-21`. No other model variable is needed.
-All GPT Image options use `quality=low`, `size=1024x1024`, and base64 uploads.
-The text model remains controlled separately by `GROQ_MODEL`.
+In Sliplane or another Docker host, apply the selected value to **both API and
+worker** (the worker generates images), save and redeploy/recreate both
+containers. Deploy code supporting these model names first. Subsequent switches
+only require changing the environment and recreating the containers, without a
+source change or image rebuild. To return to the previous model, use
+`IMAGE_MODEL=gpt-image-2-2026-04-21`.
 
-Save and **redeploy/recreate both containers** after changing their environment.
-Deploy the code with GPT Image 2.5 support first; older builds do not recognize
-these values. No source edit or new image build is needed for subsequent model
-switches. Check the worker startup log for
-`Image generation configuration: IMAGE_MODEL=...`.
+Verify the worker startup logs contain:
 
-With Docker Compose, put the chosen `IMAGE_MODEL` in the Compose `.env` file or
-export it in the shell, then run `docker compose up -d --force-recreate api worker`.
-Compose passes the same setting to both services instead of forcing DALL·E 3.
-Unset or blank values default to `gpt-image-2-2026-04-21`; unsupported values fail
-at startup with the list of accepted models rather than silently using another.
-Legacy per-story `model` overrides are ignored, including in previously queued jobs.
-
-Other accepted values are `gpt-image-2`, `gpt-image-1.5`, `gpt-image-1-mini`,
-`gpt-image-1`, `dall-e-2`, and `dall-e-3` (also `dalle-2` / `dalle-3`).
-Legacy identifiers are retained for compatibility; provider availability and
-account access still apply. Official model references:
-[Flare](https://developers.openai.com/api/docs/models/gpt-image-2.5-flare) and
-[Sunburst](https://developers.openai.com/api/docs/models/gpt-image-2.5-sunburst).
-
-Older deployments with `GROQ_MODEL=llama-3.3-70b-versatile` are migrated to
-`openai/gpt-oss-120b` with a warning. Other explicit model choices are preserved.
-
-If the frontend still reports `model_not_found` for Llama after merging:
-
-1. In Sliplane, check that **both API and worker** deploy from `main` and that the
-   worker uses `api/celery_tasks/Dockerfile.worker` with the repository root as
-   its build context.
-2. Set `GROQ_MODEL=openai/gpt-oss-120b` in both services, then **save and redeploy**
-   them. Restarting the existing container does not rebuild its code.
-3. Verify the worker startup log contains `Worker configuration: Groq
-   model=openai/gpt-oss-120b` and compare `deployment commit` with the deployed
-   commit in Sliplane (it is `unknown` outside Sliplane).
-4. Generate a **new** story. A failed Celery task retains its previous error;
-   polling that task again does not rerun it with the updated code.
-
-The frontend displays the worker's task failure; changing frontend image-model
-settings cannot fix a Groq text-model error.
-
-The frontend reads these variables:
-
-```env
-NEXT_PUBLIC_SUPABASE_URL=https://your-project.supabase.co
-NEXT_PUBLIC_SUPABASE_ANON_KEY=...
-NEXT_PUBLIC_FASTAPI_URL=http://localhost:8000
+```text
+Image generation configuration: IMAGE_MODEL=gpt-image-2.5-flare
+Worker configuration: Groq model=openai/gpt-oss-120b; deployment commit=...
 ```
 
-`.env.example` is a minimal starting point; add the backend Supabase and Redis values before running generation locally.
+The image-model value will reflect your selection. `SLIPLANE_COMMIT_HASH` is
+provided by Sliplane for the deployment commit log, or defaults to `unknown`.
+Changing environment variables does not rerun failed Celery tasks: generate a
+new story to test the new configuration. A Groq `model_not_found` error concerns
+`GROQ_MODEL`, not `IMAGE_MODEL` or the frontend.
+
+#### Frontend
+
+| Variable | Accepted value / default | Purpose |
+|---|---|---|
+| `NEXT_PUBLIC_SUPABASE_URL` | Project URL matching the backend; required for auth and library/gallery queries | Public Supabase endpoint. |
+| `NEXT_PUBLIC_SUPABASE_ANON_KEY` | Matching project anon key; required for Supabase features | Public client key; never use the service-role key here. |
+| `NEXT_PUBLIC_FASTAPI_URL` | Backend base URL, e.g. `http://localhost:8000` locally or `https://api.example.com` in production | Used by generation, task polling and transcription. Set explicitly: the shared generation hook has no default. Use a browser-reachable URL, without a trailing slash. |
+| `NEXT_PUBLIC_SITE_URL` | Optional site origin, e.g. `https://www.cuentee.com` | OAuth callback redirect origin; falls back to the request origin when absent/empty. Match Supabase's configured redirect URLs. |
+
+The frontend Dockerfile builds with placeholders and replaces the three required
+`NEXT_PUBLIC_*` values in the compiled JavaScript at container startup. Set those
+variables on the frontend container and recreate it when they change.
+`NEXT_PUBLIC_SITE_URL` is read by the server-side auth callback and is not part
+of that replacement list. For a local production build outside Docker, supply
+public variables when running `pnpm build`.
+
+`frontend/docker-compose.yml` supplies development placeholders for Supabase;
+replace them before using real auth. It also declares `SUPABASE_SERVICE_ROLE_KEY`
+and `SUPABASE_JWT_SECRET`, but the frontend application does not read either.
+They are not required frontend settings.
+
+#### Runtime, tracing and test settings
+
+| Variable | Accepted value / default | Scope |
+|---|---|---|
+| `PORT` | TCP port number `1`–`65535`; frontend Docker default `3000`, worker health-server default `8000` | Frontend standalone server and worker startup script. Does not change FastAPI's port: its Docker command explicitly uses `8000`. Update port mappings/probes if changed. |
+| `HOSTNAME` | Bind address for the frontend standalone server; Dockerfile sets `0.0.0.0` | The worker script separately sets its Celery hostname from the container hostname. |
+| `NODE_ENV` | `development`, `production` or `test`; frontend Docker sets `production` | Next.js runtime mode. |
+| `PYTHONPATH` | Python module search path; backend Dockerfiles set `/app` | Keeps the `api` package importable. Normally leave the Docker value unchanged. |
+| `LANGSMITH_TRACING` | Optional `true` / `false`; legacy `LANGCHAIN_TRACING_V2` is also supported by the tracing SDK | Enable/disable LangSmith traces used by the decorated workflow and wrapped OpenAI client. |
+| `LANGSMITH_API_KEY` | LangSmith key; legacy `LANGCHAIN_API_KEY` alias | Required for authenticated hosted tracing, not for story generation itself. |
+| `LANGSMITH_PROJECT` | Optional project name; legacy `LANGCHAIN_PROJECT` alias | LangSmith trace destination project. |
+| `RUN_REAL_API_TESTS` | Exactly `true` enables the opt-in real Groq test; otherwise skipped | Tests only. Can make billable provider calls. |
+
+Tracing settings are consumed by the installed LangSmith/LangChain SDKs rather
+than application config. These dependencies are not version-pinned in
+`api/requirements.txt`; consult the installed SDK for additional tracing options.
 
 ### Redis Cloud database replacement
 
-The API health check, Celery broker and Celery result backend share `REDIS_URL`.
+The API startup Redis check, Celery broker and Celery result backend share `REDIS_URL`.
 For local development it defaults to `redis://localhost:6379/0`; hosted services
 must supply their Redis Cloud URL as a deployment secret.
 
-The replacement Cuentee instance is:
-
-- Host: `redis-13424.c135.eu-central-1-1.ec2.cloud.redislabs.com`
-- Port: `13424`
-- Username: `default`
-- Database: `0`
-- Scheme: `redis://`, matching the connection supplied for this instance
-
-Use `.env.redis-cloud.example` as the connection template and replace `PASSWORD`
-with the password from Redis Cloud. URL-encode reserved characters in passwords.
-Keep the complete URL in your hosting provider's secret/environment settings or
-an ignored local `.env` file, never in Git.
+Use the endpoint and credentials of your active Redis Cloud database. The
+`.env.redis-cloud.example` file records a connection template; it is not proof
+that a hosted database is currently running. Replace its host, port and password
+with your current connection details. Keep the full URL in deployment secrets
+or an ignored local `.env` file.
 
 When replacing a deleted database:
 
@@ -268,46 +296,118 @@ does not restore queued tasks or task results from the deleted instance.
 
 ### Backend and Worker
 
+From the repository root, create a virtual environment and install dependencies:
+
 ```bash
+python3 -m venv .venv
+source .venv/bin/activate
 pip install -r api/requirements.txt
-redis-server
-uvicorn api.main:app --reload
-celery -A api.celery_tasks.app worker --loglevel=info
 ```
 
-Generation endpoints enqueue Celery tasks. Redis and the worker must be running or story generation will not complete.
+With `.env` configured, run each process in a separate terminal (activate the
+virtual environment in the Python terminals):
+
+```bash
+# Terminal 1: Redis, unless using a hosted service
+redis-server
+
+# Terminal 2: HTTP API
+uvicorn api.main:app --reload
+
+# Terminal 3: worker; import the tasks module so generation is registered
+celery -A api.celery_tasks.tasks worker --loglevel=info --pool=solo
+```
+
+The API listens on `http://localhost:8000`; interactive API docs are at `/docs`.
+Redis and the worker must be reachable for queued story generation to complete.
 
 ### Frontend
 
+Populate `frontend/.env.local` with the frontend variables, then:
+
 ```bash
 cd frontend
-npm install
-npm run dev
+npm install -g pnpm@10.28.2
+pnpm install --frozen-lockfile
+pnpm dev
 ```
 
-The frontend runs at `http://localhost:3000` by default.
+The frontend runs at `http://localhost:3000`. The canonical dependency lockfile
+for Docker is `frontend/pnpm-lock.yaml`; `pnpm-workspace.yaml` explicitly allows
+build scripts for `sharp` and `unrs-resolver`.
+
+```bash
+pnpm build
+pnpm start
+```
+
+The current Next.js config skips ESLint and TypeScript failures during builds;
+a successful build alone does not establish that lint/type checks passed.
 
 ### Docker
 
-The root `docker-compose.yml` builds the FastAPI API and Celery worker. It expects Redis and Supabase configuration through environment variables.
+The root Compose file builds API and worker; Redis and Supabase are external.
+It explicitly forwards only a subset of the backend environment. Compose's
+`.env` performs interpolation and **does not automatically inject every variable
+into containers**. To pass the complete backend `.env` without editing the base
+file, create a local `docker-compose.local.yml` (do not commit credentials):
 
-```bash
-docker-compose up --build
+```yaml
+services:
+  api:
+    env_file:
+      - .env
+  worker:
+    env_file:
+      - .env
 ```
 
-The frontend has its own Dockerfile and compose file under `frontend/`.
+Then run from the repository root:
+
+```bash
+docker compose -f docker-compose.yml -f docker-compose.local.yml up -d --build
+```
+
+This supplies missing backend settings such as `SUPABASE_ANON_KEY`,
+`SUPABASE_SERVICE_ROLE_KEY` and `SUPABASE_PROJECT_REF`. Explicit `environment`
+entries in the base Compose file take precedence over `env_file`.
+Use a Redis URL reachable from containers, not the host's `localhost`.
+After an `IMAGE_MODEL` change in `.env`, recreate with the same overlay:
+
+```bash
+docker compose -f docker-compose.yml -f docker-compose.local.yml up -d --force-recreate api worker
+```
+
+For separate Docker-host deployments, use `api/Dockerfile` with build context
+`api/`, and `api/celery_tasks/Dockerfile.worker` with the repository root as build
+context. The worker script starts an HTTP liveness server on `PORT` alongside
+Celery; its `OK` response does not prove a story can be generated.
+
+The frontend has a separate Dockerfile and Compose file. With frontend variables
+in `frontend/.env.local`, run from the repository root:
+
+```bash
+docker compose --env-file frontend/.env.local -f frontend/docker-compose.yml up -d --build
+```
+
+Its `/api/health` endpoint checks frontend liveness without calling Supabase or
+the backend. See [frontend/README.md](frontend/README.md) for Docker build details.
 
 ## API Endpoints
 
 | Method | Endpoint | Description |
 |---|---|---|
-| `GET` | `/` | Backend health check |
+| `GET` | `/` | API liveness (`status: ok`); no per-request dependency check |
 | `POST` | `/stories/generate-story-async` | Enqueue open story generation |
 | `POST` | `/stories/generate_guided_story_async` | Enqueue guided story generation |
 | `GET` | `/tasks/{task_id}` | Read Celery task status and result |
 | `WS` | `/transcription/transcribe` | Speechmatics transcription WebSocket |
 
 Story generation endpoints require a Supabase Bearer token and available credits.
+The WebSocket uses a `token` query parameter and accepts `lang=en|es|fr|de|it|pt`
+(default `en`). The task-status route currently has no authentication dependency.
+The API attempts a Redis connection check at startup but still starts if Redis
+is unavailable; `/` is not a readiness check for Redis, providers or storage.
 
 ## Database
 
@@ -316,20 +416,39 @@ The base schema in `db/schema.sql` defines:
 - `stories`: generated story content, prompt, type, metadata, timestamps, and RLS policies for user-owned records.
 - `profiles`: user credits, plan, plus refill timestamps, and signup trigger.
 
-Additional SQL scripts in `frontend/scripts/` extend the deployed schema with fields and policies used by the UI, including usernames, story visibility, public gallery access, and profile fixes.
+Additional SQL scripts in `frontend/scripts/` extend the schema with fields and
+policies used by the UI, including usernames, story visibility and public gallery
+access. `db/migration_metadata.sql` adds story metadata/type fields to existing
+installations. Inspect the current database before applying scripts: several
+scripts are alternative fixes, not a single ordered migration sequence.
+
+The base schema grants three signup credits. The API's background job checks
+`plus` profiles daily and adds ten credits when at least 30 days have elapsed
+since the last refill or plan start. These values are code/SQL constants, not
+environment options. Deployment database state can differ from the base schema.
 
 ## Tests
 
 ```bash
-pytest
+python -m pytest tests -q
 ```
 
-Real Groq integration coverage is opt-in:
+The real Groq integration test is gated by `RUN_REAL_API_TESTS=true`:
 
 ```bash
-RUN_REAL_API_TESTS=true pytest tests/test_agents.py::test_real_story_generation_integration -v
+RUN_REAL_API_TESTS=true python -m pytest tests/test_agents.py::test_real_story_generation_integration -v
 ```
+
+The default suite uses fake credentials and mocked provider calls; it does not
+verify production credentials, provider access, Redis connectivity or storage
+permissions. Image tests inspect SDK HTTP payloads and base64/URL processing.
+The current autouse fixture in `tests/conftest.py` replaces keys with test values,
+so setting the opt-in flag alone is not a reliable live-provider check. A
+credential-preserving test fixture/client is needed before using that test to
+validate real access. For a deployed check, generate a new story and inspect
+its images, PDF and saved record: image failures return empty URLs, and PDF or
+database errors can be logged without changing the Celery task to `FAILURE`.
 
 ## License
 
-MIT
+No license file is currently included in this repository.
